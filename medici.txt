@@ -1,0 +1,8 @@
+Cardiologie;Dr.Ionescu;08:00-14:00;Sun;0721000111
+Cardiologie;Dr.Popescu;14:00-20:00;Mon;0721000222
+Neurologie;Dr.Radu;09:00-17:00;Wed;0722111222
+Neurologie;Dr.Andrei;08:00-14:00;Sun;0722111333
+Urologie;Dr.Stoica;08:00-16:00;Fri;0730111888
+Urologie;Dr.Manole;10:00-18:00;Sat;0730111999
+Stomatologie;Dr.Dumitru;09:00-21:00;Thu;0744999888
+Stomatologie;Dr.Lazar;08:00-14:00;Sun;0744111222

@@ -1,0 +1,5 @@
+Cardiologie:Infarct,Hipertensiune,Aritmie,Angina,Insuficienta
+Neurologie:AVC,Epilepsie,Scleroza,Parkinson,Alzheimer
+Urologie:Litiaza,Cistita,Prostatita,Incontinenta,Adenom
+Stomatologie:Caria,Gingivita,Parodontoza,Abces,Pulpita
+Dermatologie:Psoriazis,Eczema,Acnee,Melanom,Dermatita
