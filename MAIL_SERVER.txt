@@ -1,17 +1,19 @@
 ==========================================
 DE LA: server-notificari@spital-central.ro
-CATRE: vasistirbu0@gmail.com (GMAIL)
+CATRE: vasile@gmail.com (GMAIL)
 SUBIECT: Confirmare Programare Medicala - 2026
 ------------------------------------------
 Stimate Stirbu Vasile,
 
 Programarea dumneavoastra a fost inregistrata cu succes.
 Detalii consultatie:
-- Specializare: Dr.Dumitru (Stomatologie)
-- Telefon Medic: 0744999888
-- Boala declarata: Caria
-- Data: 23.4.2026
-- Ora: 10:30
+- Specializare: Dr.Miron (Neurologie)
+- Telefon Medic: 0722888999
+- Boala declarata: Scleroza
+- Data: 20.4.2026
+- Ora: 12:30
+
+Cod anulare programare: #257060
 
 Va rugam sa aveti la dumneavoastra cardul de sanatate.
 ==========================================
