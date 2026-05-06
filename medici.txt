@@ -1,10 +1,10 @@
-Cardiologie;Dr.Vasilescu;08:00-14:00;Sat;0721444555;7500
+Cardiologie;Dr.Vasilescu;07:00-17:00;Sat;0721444555;7500
 Cardiologie;Dr.Georgescu;14:00-20:00;Sun;0721666777;7200
-Neurologie;Dr.Miron;07:00-15:00;Fri;0722888999;8000
-Neurologie;Dr.Sandu;15:00-22:00;Mon;0722333444;7800
-Urologie;Dr.Nistor;09:00-17:00;Sat;0730555666;7000
-Urologie;Dr.Balan;08:00-16:00;Sun;0730777888;7100
-Stomatologie;Dr.Enache;09:00-21:00;Tue;0744222333;6500
-Stomatologie;Dr.Marin;10:00-18:00;Wed;0744555666;6800
 Dermatologie;Dr.Stanescu;08:00-14:00;Thu;0755111222;7300
 Dermatologie;Dr.Voicu;14:00-20:00;Sat;0755999000;7100
+Neurologie;Dr.Miron;07:00-15:00;Fri;0722888999;8000
+Neurologie;Dr.Sandu;15:00-22:00;Mon;0722333444;7800
+Stomatologie;Dr.Enache;09:00-21:00;Tue;0744222333;6500
+Stomatologie;Dr.Marin;10:00-18:00;Wed;0744555666;6800
+Urologie;Dr.Nistor;09:00-17:00;Sat;0730555666;7000
+Urologie;Dr.Balan;08:00-16:00;Sun;0730777888;7100
