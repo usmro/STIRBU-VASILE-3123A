@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spital Central – Sistem de Gestionare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:     #C0392B;
+    --red-l:   #E74C3C;
+    --orange:  #E67E22;
+    --green:   #27AE60;
+    --navy:    #0D1B2A;
+    --navy-2:  #152536;
+    --navy-3:  #1E3448;
+    --ice:     #EAF4FF;
+    --ice-2:   #D4E9FA;
+    --white:   #FFFFFF;
+    --text:    #0D1B2A;
+    --muted:   #5A7A96;
+    --border:  rgba(13,27,42,0.10);
+    --shadow:  0 4px 32px rgba(13,27,42,0.13);
+    --shadow-lg: 0 12px 64px rgba(13,27,42,0.18);
+    --radius:  16px;
+    --radius-sm: 10px;
+    --font-display: 'DM Serif Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+    --transition: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    background: var(--ice);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 900px 600px at 80% -10%, rgba(192,57,43,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 700px 500px at -5% 80%, rgba(13,27,42,0.07) 0%, transparent 70%),
+      linear-gradient(160deg, #EAF4FF 0%, #D4E9FA 60%, #EAF4FF 100%);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 0 48px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 24px rgba(13,27,42,0.28);
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .header-cross {
+    width: 36px; height: 36px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .header-cross::before, .header-cross::after {
+    content: '';
+    position: absolute;
+    background: var(--red-l);
+    border-radius: 3px;
+  }
+  .header-cross::before { width: 12px; height: 36px; left: 12px; top: 0; }
+  .header-cross::after  { width: 36px; height: 12px; left: 0; top: 12px; }
+  .header-title {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+  .header-title span {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .header-nav { display: flex; gap: 6px; }
+  .header-nav a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .header-nav a:hover { background: rgba(255,255,255,0.1); color: white; }
+  .header-nav a.active { background: var(--red); color: white; }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 80px 48px 60px;
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+    min-height: calc(100vh - 72px);
+  }
+  .hero-text { animation: fadeUp 0.7s ease both; }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(192,57,43,0.09);
+    color: var(--red);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(192,57,43,0.18);
+  }
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 4.5vw, 4rem);
+    line-height: 1.1;
+    color: var(--navy);
+    margin-bottom: 20px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--red);
+  }
+  .hero p {
+    font-size: 1.05rem;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 440px;
+    margin-bottom: 40px;
+    font-weight: 300;
+  }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: var(--transition);
+    letter-spacing: 0.01em;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .btn:hover::after { opacity: 0.08; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--red); color: white; box-shadow: 0 4px 18px rgba(192,57,43,0.35); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(192,57,43,0.4); }
+  .btn-navy { background: var(--navy); color: white; box-shadow: 0 4px 18px rgba(13,27,42,0.25); }
+  .btn-navy:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,27,42,0.35); }
+  .btn-outline {
+    background: transparent;
+    color: var(--navy);
+    border: 2px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--navy); background: rgba(13,27,42,0.04); }
+  .btn-green { background: var(--green); color: white; box-shadow: 0 4px 18px rgba(39,174,96,0.3); }
+  .btn-green:hover { transform: translateY(-2px); }
+  .btn-lg { padding: 17px 36px; font-size: 1.05rem; }
+  .btn-sm { padding: 9px 18px; font-size: 0.85rem; }
+
+  /* ── HERO VISUAL ── */
+  .hero-visual {
+    position: relative;
+    animation: fadeUp 0.7s 0.15s ease both;
+  }
+  .hospital-card {
+    background: white;
+    border-radius: 24px;
+    padding: 36px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+  .hospital-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--red), var(--orange), var(--green));
+  }
+  .hcard-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--navy);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hcard-title::before {
+    content: '🏥';
+    font-size: 1.3rem;
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .status-item {
+    background: var(--ice);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .status-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+  }
+  .status-dot.red    { background: var(--red-l);  box-shadow: 0 0 0 4px rgba(231,76,60,0.15); }
+  .status-dot.orange { background: var(--orange); box-shadow: 0 0 0 4px rgba(230,126,34,0.15); }
+  .status-dot.green  { background: var(--green);  box-shadow: 0 0 0 4px rgba(39,174,96,0.15); }
+  .status-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .status-count {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--navy);
+    line-height: 1;
+    margin-top: 4px;
+  }
+  .quick-actions-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .quick-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    transition: all 0.22s;
+    text-decoration: none;
+  }
+  .quick-btn:hover {
+    border-color: var(--navy);
+    background: var(--navy);
+    color: white;
+    transform: translateX(4px);
+  }
+  .quick-btn .qb-icon {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: background 0.22s;
+  }
+  .qb-red   .qb-icon { background: rgba(192,57,43,0.1); }
+  .qb-orange .qb-icon { background: rgba(230,126,34,0.1); }
+  .qb-green  .qb-icon { background: rgba(39,174,96,0.1); }
+  .qb-blue   .qb-icon { background: rgba(13,27,42,0.07); }
+  .quick-btn:hover .qb-icon { background: rgba(255,255,255,0.15); }
+  .qb-arrow { margin-left: auto; opacity: 0.4; font-size: 1rem; }
+  .quick-btn:hover .qb-arrow { opacity: 1; transform: translateX(3px); transition: all 0.2s; }
+
+  /* ── MAIN CONTENT SECTIONS ── */
+  .section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 48px 80px;
+  }
+  .section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    color: var(--navy);
+    line-height: 1.1;
+  }
+  .section-subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    font-weight: 300;
+    margin-top: 4px;
+  }
+
+  /* ── CARDS ── */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: all 0.28s;
+    cursor: default;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .card-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 18px;
+  }
+  .ci-red    { background: rgba(192,57,43,0.1); }
+  .ci-orange { background: rgba(230,126,34,0.1); }
+  .ci-green  { background: rgba(39,174,96,0.1); }
+  .ci-blue   { background: rgba(13,27,42,0.08); }
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+  .card-desc {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
+    margin-bottom: 20px;
+  }
+
+  /* ── URGENCY LEGEND ── */
+  .urgency-bar {
+    background: white;
+    border-radius: var(--radius);
+    padding: 20px 28px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+    border: 1px solid var(--border);
+  }
+  .urgency-bar-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .urgency-items { display: flex; gap: 20px; flex-wrap: wrap; }
+  .urgency-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .u-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .u-dot.r { background: var(--red-l); }
+  .u-dot.o { background: var(--orange); }
+  .u-dot.g { background: var(--green); }
+
+  /* ── MODALS ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(13,27,42,0.55);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .modal {
+    background: white;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(13,27,42,0.3);
+    transform: translateY(30px) scale(0.96);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+  .modal-overlay.open .modal {
+    transform: translateY(0) scale(1);
+  }
+  .modal-header {
+    padding: 28px 32px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--navy);
+    line-height: 1.2;
+  }
+  .modal-subtitle {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 300;
+  }
+  .modal-close {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--muted);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--navy); color: white; border-color: var(--navy); }
+  .modal-body { padding: 24px 32px 32px; }
+  .modal-line { height: 1px; background: var(--border); margin: 0 32px 24px; }
+
+  /* ── FORMS ── */
+  .form-group { margin-bottom: 20px; }
+  .form-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--text);
+    background: var(--ice);
+    transition: all 0.2s;
+    outline: none;
+    appearance: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--navy);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(13,27,42,0.08);
+  }
+  .form-input.error { border-color: var(--red-l); background: rgba(231,76,60,0.04); }
+  .form-error { font-size: 0.8rem; color: var(--red); margin-top: 5px; display: none; }
+  .form-error.show { display: block; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-textarea { resize: vertical; min-height: 90px; }
+
+  /* ── STEPS ── */
+  .steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 32px;
+  }
+  .step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+  .step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+  }
+  .step.done:not(:last-child)::after,
+  .step.active:not(:last-child)::after { background: var(--navy); }
+  .step-circle {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--ice);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--muted);
+    z-index: 1;
+    transition: all 0.3s;
+  }
+  .step.done .step-circle { background: var(--navy); border-color: var(--navy); color: white; }
+  .step.active .step-circle { background: var(--red); border-color: var(--red); color: white; box-shadow: 0 0 0 4px rgba(192,57,43,0.15); }
+  .step-label { font-size: 0.72rem; font-weight: 500; color: var(--muted); margin-top: 6px; text-align: center; }
+  .step.active .step-label { color: var(--red); font-weight: 600; }
+  .step.done .step-label { color: var(--navy); }
+
+  /* ── TRIAJ QUESTIONS ── */
+  .triaj-question {
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--ice);
+    margin-bottom: 12px;
+    transition: all 0.2s;
+  }
+  .triaj-question.answered-yes { border-color: var(--red); background: rgba(192,57,43,0.04); }
+  .triaj-question.answered-no  { border-color: var(--green); background: rgba(39,174,96,0.04); }
+  .triaj-q-text {
+    font-size: 0.92rem;
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .triaj-q-group { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .triaj-btns { display: flex; gap: 10px; }
+  .triaj-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: white;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .triaj-btn.yes { border-color: var(--red-l); color: var(--red); }
+  .triaj-btn.yes:hover, .triaj-btn.yes.selected { background: var(--red); border-color: var(--red); color: white; }
+  .triaj-btn.no  { border-color: var(--green); color: var(--green); }
+  .triaj-btn.no:hover, .triaj-btn.no.selected  { background: var(--green); border-color: var(--green); color: white; }
+
+  /* ── URGENCY RESULT ── */
+  .urgency-result {
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-top: 24px;
+    display: none;
+  }
+  .urgency-result.show { display: block; animation: fadeUp 0.4s ease both; }
+  .ur-red    { background: rgba(192,57,43,0.08); border: 2px solid rgba(192,57,43,0.3); }
+  .ur-orange { background: rgba(230,126,34,0.08); border: 2px solid rgba(230,126,34,0.3); }
+  .ur-green  { background: rgba(39,174,96,0.08);  border: 2px solid rgba(39,174,96,0.3); }
+  .ur-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+  }
+  .ur-red .ur-title    { color: var(--red); }
+  .ur-orange .ur-title { color: var(--orange); }
+  .ur-green .ur-title  { color: var(--green); }
+  .ur-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+  .ur-score { font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-top: 8px; }
+
+  /* ── POPUP / TOAST ── */
+  .popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(13,27,42,0.5);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .popup-overlay.open { opacity: 1; pointer-events: all; }
+  .popup {
+    background: white;
+    border-radius: 28px;
+    padding: 48px 56px;
+    text-align: center;
+    max-width: 460px;
+    width: 90%;
+    box-shadow: 0 24px 80px rgba(13,27,42,0.3);
+    transform: scale(0.8) translateY(20px);
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .popup-overlay.open .popup { transform: scale(1) translateY(0); }
+  .popup-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    position: relative;
+  }
+  .popup-icon::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    opacity: 0.2;
+    animation: ringPulse 1.5s ease-out 0.3s both;
+  }
+  @keyframes ringPulse {
+    from { transform: scale(0.8); opacity: 0.4; }
+    to   { transform: scale(1.2); opacity: 0; }
+  }
+  .popup-icon.success { background: rgba(39,174,96,0.12); color: var(--green); }
+  .popup-icon.error   { background: rgba(192,57,43,0.12); color: var(--red); }
+  .popup-icon.warning { background: rgba(230,126,34,0.12); color: var(--orange); }
+  .popup-icon.info    { background: rgba(13,27,42,0.08);   color: var(--navy); }
+  .popup h2 {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+  .popup p { font-size: 0.95rem; color: var(--muted); line-height: 1.6; font-weight: 300; margin-bottom: 28px; }
+  .popup-details {
+    background: var(--ice);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    text-align: left;
+    font-size: 0.88rem;
+    color: var(--text);
+    line-height: 1.8;
+    border: 1px solid var(--border);
+  }
+  .popup-details strong { color: var(--navy); }
+  .popup-actions { display: flex; gap: 12px; justify-content: center; }
+
+  /* ── CONFETTI ── */
+  .confetti-piece {
+    position: fixed;
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    z-index: 3000;
+    animation: confettiFall linear forwards;
+    pointer-events: none;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ── ADMIN PANEL ── */
+  .admin-grid { display: grid; grid-template-columns: 240px 1fr; gap: 0; min-height: 80vh; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-lg); }
+  .admin-sidebar {
+    background: var(--navy);
+    padding: 28px 0;
+  }
+  .admin-sidebar-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    padding: 0 24px;
+    margin-bottom: 8px;
+    margin-top: 20px;
+  }
+  .admin-sidebar-title:first-child { margin-top: 0; }
+  .admin-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+  }
+  .admin-menu-item:hover { background: rgba(255,255,255,0.07); color: white; border-left-color: rgba(255,255,255,0.3); }
+  .admin-menu-item.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--red-l); }
+  .admin-menu-item .mi-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .admin-content { background: white; padding: 40px; overflow-y: auto; }
+  .admin-content-title { font-family: var(--font-display); font-size: 1.8rem; color: var(--navy); margin-bottom: 24px; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  thead { background: var(--ice); }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-weight: 400;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--ice); }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-red    { background: rgba(192,57,43,0.1);  color: var(--red); }
+  .badge-orange { background: rgba(230,126,34,0.1); color: var(--orange); }
+  .badge-green  { background: rgba(39,174,96,0.1);  color: var(--green); }
+  .badge-navy   { background: rgba(13,27,42,0.08);  color: var(--navy); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    15%       { transform: scale(1.2); }
+    30%       { transform: scale(1); }
+    45%       { transform: scale(1.1); }
+    60%       { transform: scale(1); }
+  }
+  .heartbeat { animation: heartbeat 2s infinite; display: inline-block; }
+
+  /* ── LOADING / PROGRESS ── */
+  .progress-bar-wrap {
+    height: 6px;
+    background: var(--ice);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 100px;
+    background: var(--red);
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--navy);
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    padding: 28px 48px;
+    font-size: 0.82rem;
+  }
+  footer strong { color: rgba(255,255,255,0.8); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding: 48px 24px 40px; min-height: auto; }
+    .hero-visual { display: none; }
+    .section { padding: 0 24px 60px; }
+    header { padding: 0 24px; }
+    .header-nav { display: none; }
+    .admin-grid { grid-template-columns: 1fr; }
+    .admin-sidebar { display: none; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 48px 0;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 48px;
+    color: var(--muted);
+  }
+  .empty-state .es-icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ HEADER ══════════ -->
+<header>
+  <div class="header-brand">
+    <div class="header-cross"></div>
+    <div class="header-title">
+      Spital Central
+      <span>Sistem de Gestionare</span>
+    </div>
+  </div>
+  <nav class="header-nav">
+    <a href="#" class="active" onclick="showPage('home')">Acasă</a>
+    <a href="#" onclick="showPage('pacient')">Pacient</a>
+    <a href="#" onclick="showPage('admin')">Admin</a>
+    <a href="plata.html" target="_blank">💳 Plată Factură</a>
+  </nav>
+</header>
+
+<!-- ══════════ PAGES ══════════ -->
+
+<!-- ── HOME PAGE ── -->
+<div id="page-home" class="page active">
+  <section class="hero">
+    <div class="hero-text">
+      <div class="hero-badge">
+        <span class="heartbeat">❤️</span>&nbsp; Sistem activ 24/7
+      </div>
+      <h1>Îngrijire <em>modernă,</em><br>răspuns rapid.</h1>
+      <p>Gestionați programările, triajul de urgență și internările pacienților direct din browser. Simplu, rapid, eficient.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary btn-lg" onclick="showPage('pacient')">
+          👤 Portal Pacient
+        </button>
+        <button class="btn btn-navy btn-lg" onclick="showPage('admin')">
+          🔒 Portal Admin
+        </button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hospital-card">
+        <div class="hcard-title">Tablou de bord – Urgențe</div>
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-dot red"></div>
+            <div class="status-count" id="cnt-red">3</div>
+            <div class="status-label">Cod Roșu</div>
+          </div>
+          <div class="status-item">
+            <div class="status-dot orange"></div>
+            <div class="status-count" id="cnt-orange">7</div>
+            <div class="status-label">Cod Portocaliu</div>
+          </div>
+          <div class="status-item">
+            <div class="status-dot green"></div>
+            <div class="status-count" id="cnt-green">12</div>
+            <div class="status-label">Cod Verde</div>
+          </div>
+        </div>
+        <div class="quick-actions-title">Acțiuni rapide</div>
+        <div class="quick-btns">
+          <a href="#" class="quick-btn qb-red" onclick="showPage('pacient');openModal('modal-ambulanta');return false;">
+            <div class="qb-icon">🚑</div>
+            Pacient Ambulanță
+            <span class="qb-arrow">→</span>
+          </a>
+          <a href="#" class="quick-btn qb-orange" onclick="showPage('pacient');openModal('modal-urgenta');return false;">
+            <div class="qb-icon">⚡</div>
+            Prezentare Urgență
+            <span class="qb-arrow">→</span>
+          </a>
+          <a href="#" class="quick-btn qb-green" onclick="showPage('pacient');openModal('modal-programare');return false;">
+            <div class="qb-icon">📅</div>
+            Programare Nouă
+            <span class="qb-arrow">→</span>
+          </a>
+          <a href="plata.html" target="_blank" class="quick-btn qb-blue">
+            <div class="qb-icon">💳</div>
+            Plată Factură
+            <span class="qb-arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section">
+    <div class="urgency-bar">
+      <span class="urgency-bar-label">Legenda triaj:</span>
+      <div class="urgency-items">
+        <div class="urgency-item"><div class="u-dot r"></div> <strong>Cod Roșu</strong> – Pericol vital imediat</div>
+        <div class="urgency-item"><div class="u-dot o"></div> <strong>Cod Portocaliu</strong> – Urgență, tratament rapid</div>
+        <div class="urgency-item"><div class="u-dot g"></div> <strong>Cod Verde</strong> – Consultație standard</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div>
+        <div class="section-title">Servicii disponibile</div>
+        <div class="section-subtitle">Selectați tipul de interacțiune dorit</div>
+      </div>
+    </div>
+    <div class="cards-grid">
+      <div class="card" onclick="showPage('pacient');openModal('modal-ambulanta')">
+        <div class="card-icon ci-red">🚑</div>
+        <div class="card-title">Pacient Ambulanță</div>
+        <div class="card-desc">Pacienții aduși cu ambulanța primesc automat Cod Roșu și sunt repartizați direct în cameră sau în sala de operații.</div>
+        <button class="btn btn-primary btn-sm">Accesați →</button>
+      </div>
+      <div class="card" onclick="showPage('pacient');openModal('modal-urgenta')">
+        <div class="card-icon ci-orange">⚡</div>
+        <div class="card-title">Urgență Triaj</div>
+        <div class="card-desc">Sistem avansat de 20 întrebări pentru determinarea codului de urgență. Verde, portocaliu sau roșu bazat pe simptome.</div>
+        <button class="btn btn-outline btn-sm" style="border-color:var(--orange);color:var(--orange)">Accesați →</button>
+      </div>
+      <div class="card" onclick="showPage('pacient');openModal('modal-consultatie')">
+        <div class="card-icon ci-green">🩺</div>
+        <div class="card-title">Prezentare Consultație</div>
+        <div class="card-desc">Pacienții care se prezintă singur completează un formular detaliat. Se determină dacă internarea este necesară.</div>
+        <button class="btn btn-outline btn-sm" style="border-color:var(--green);color:var(--green)">Accesați →</button>
+      </div>
+      <div class="card" onclick="showPage('pacient');openModal('modal-programare')">
+        <div class="card-icon ci-blue">📅</div>
+        <div class="card-title">Programare</div>
+        <div class="card-desc">Programați o consultație planificată la un medic specialist. Confirmarea se trimite pe email împreună cu factura.</div>
+        <button class="btn btn-navy btn-sm">Accesați →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PACIENT PAGE ── -->
+<div id="page-pacient" class="page">
+  <div class="section" style="padding-top:48px">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Portal Pacient</div>
+        <div class="section-subtitle">Alegeți tipul de interacțiune</div>
+      </div>
+      <button class="btn btn-outline" onclick="showPage('home')">← Înapoi</button>
+    </div>
+    <div class="cards-grid">
+      <div class="card" onclick="openModal('modal-ambulanta')">
+        <div class="card-icon ci-red">🚑</div>
+        <div class="card-title">Ambulanță – Cod Roșu</div>
+        <div class="card-desc">Pacient adus de urgență. Repartizare imediată în cameră sau sala de operații. Se cere doar numele.</div>
+        <button class="btn btn-primary btn-sm">Deschide →</button>
+      </div>
+      <div class="card" onclick="openModal('modal-urgenta')">
+        <div class="card-icon ci-orange">⚡</div>
+        <div class="card-title">Urgență + Triaj</div>
+        <div class="card-desc">Evaluare cu 20 de întrebări pentru determinarea codului de urgență.</div>
+        <button class="btn btn-outline btn-sm" style="border-color:var(--orange);color:var(--orange)">Deschide →</button>
+      </div>
+      <div class="card" onclick="openModal('modal-consultatie')">
+        <div class="card-icon ci-green">🩺</div>
+        <div class="card-title">Prezentare Singur</div>
+        <div class="card-desc">Completați un set de întrebări medicale. Se determină dacă aveți nevoie de internare.</div>
+        <button class="btn btn-outline btn-sm" style="border-color:var(--green);color:var(--green)">Deschide →</button>
+      </div>
+      <div class="card" onclick="openModal('modal-programare')">
+        <div class="card-icon ci-blue">📅</div>
+        <div class="card-title">Programare</div>
+        <div class="card-desc">Programare planificată la medicul specialist ales.</div>
+        <button class="btn btn-navy btn-sm">Deschide →</button>
+      </div>
+      <div class="card" onclick="openModal('modal-anulare')">
+        <div class="card-icon" style="background:rgba(90,122,150,0.1)">❌</div>
+        <div class="card-title">Anulare Programare</div>
+        <div class="card-desc">Anulați o programare existentă folosind codul de anulare.</div>
+        <button class="btn btn-outline btn-sm">Deschide →</button>
+      </div>
+      <div class="card" onclick="window.open('plata.html','_blank')">
+        <div class="card-icon" style="background:rgba(13,27,42,0.06)">💳</div>
+        <div class="card-title">Plată Factură</div>
+        <div class="card-desc">Achitați facturile medicale online, prin card sau virament bancar.</div>
+        <button class="btn btn-navy btn-sm">Deschide →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADMIN PAGE ── -->
+<div id="page-admin" class="page">
+  <div id="admin-login-wrap" class="section" style="padding-top:80px;max-width:480px">
+    <div class="section-header" style="margin-bottom:24px">
+      <div>
+        <div class="section-title">Portal Admin</div>
+        <div class="section-subtitle">Autentificați-vă pentru acces</div>
+      </div>
+    </div>
+    <div style="background:white;border-radius:20px;padding:36px;box-shadow:var(--shadow)">
+      <div class="form-group">
+        <label class="form-label">Parolă administrator</label>
+        <input type="password" class="form-input" id="admin-pass" placeholder="Introduceți parola..." onkeydown="if(event.key==='Enter')loginAdmin()">
+        <div class="form-error" id="admin-err">Parolă incorectă</div>
+      </div>
+      <button class="btn btn-navy" style="width:100%" onclick="loginAdmin()">🔒 Autentificare</button>
+    </div>
+  </div>
+  <div id="admin-panel-wrap" style="display:none">
+    <div class="section" style="padding-top:40px">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Panou Administrare</div>
+          <div class="section-subtitle">Gestionare completă spital</div>
+        </div>
+        <div style="display:flex;gap:12px">
+          <a href="plata.html" target="_blank" class="btn btn-green btn-sm">💳 Link Plată Facturi</a>
+          <button class="btn btn-outline btn-sm" onclick="logoutAdmin()">Deconectare</button>
+        </div>
+      </div>
+      <div class="admin-grid">
+        <div class="admin-sidebar">
+          <div class="admin-sidebar-title">Gestionare</div>
+          <a class="admin-menu-item active" onclick="showAdminTab('programari')">
+            <span class="mi-icon">📅</span> Programări
+          </a>
+          <a class="admin-menu-item" onclick="showAdminTab('internati')">
+            <span class="mi-icon">🛏️</span> Internați
+          </a>
+          <a class="admin-menu-item" onclick="showAdminTab('facturi')">
+            <span class="mi-icon">💰</span> Facturi
+          </a>
+          <div class="admin-sidebar-title">Setări</div>
+          <a class="admin-menu-item" onclick="showAdminTab('medici')">
+            <span class="mi-icon">👨‍⚕️</span> Adaugă Medic
+          </a>
+          <a class="admin-menu-item" onclick="showAdminTab('harta')">
+            <span class="mi-icon">🗺️</span> Hartă Spital
+          </a>
+          <div class="admin-sidebar-title">Externe</div>
+          <a class="admin-menu-item" href="plata.html" target="_blank">
+            <span class="mi-icon">💳</span> Pagina Plată
+          </a>
+        </div>
+        <div class="admin-content" id="admin-content">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MODALS
+════════════════════════════════════════ -->
+
+<!-- AMBULANTA MODAL -->
+<div class="modal-overlay" id="modal-ambulanta">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🚑 Pacient Ambulanță</div>
+        <div class="modal-subtitle">Cod Roșu automat – repartizare imediată</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-ambulanta')">✕</button>
+    </div>
+    <div class="modal-line" style="margin-top:20px"></div>
+    <div class="modal-body">
+      <div style="background:rgba(192,57,43,0.07);border:1.5px solid rgba(192,57,43,0.25);border-radius:12px;padding:14px 18px;margin-bottom:24px;font-size:0.88rem;color:var(--red);font-weight:500">
+        ⚠️ Pacientul sosit cu ambulanța primește automat <strong>COD ROȘU</strong>. Se cere doar numele.
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nume *</label>
+          <input type="text" class="form-input" id="amb-nume" placeholder="ex: Popescu">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prenume *</label>
+          <input type="text" class="form-input" id="amb-prenume" placeholder="ex: Ion">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tip urgență</label>
+        <select class="form-select" id="amb-tip">
+          <option value="cardiac">❤️ Cardiac (infarct, stop cardiac)</option>
+          <option value="neuro">🧠 Neurologic (AVC, traumă craniu)</option>
+          <option value="trauma">🦴 Traumă / Accident</option>
+          <option value="other">⚕️ Altă urgență vitală</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email aparținător (opțional – pentru factură)</label>
+        <input type="email" class="form-input" id="amb-email" placeholder="ex: familie@gmail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Asigurare de sănătate?</label>
+        <select class="form-select" id="amb-asig">
+          <option value="da">Da – reducere 50%</option>
+          <option value="nu">Nu</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="proceseazaAmbulanta()">
+        🚨 Internare imediată
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- URGENTA MODAL (triaj 20 intrebari) -->
+<div class="modal-overlay" id="modal-urgenta">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">⚡ Triaj de Urgență</div>
+        <div class="modal-subtitle">20 de întrebări pentru determinarea codului de urgență</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-urgenta')">✕</button>
+    </div>
+    <div class="modal-line" style="margin-top:20px"></div>
+    <div class="modal-body">
+      <!-- step 1: date pacient -->
+      <div id="urg-step1">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nume *</label>
+            <input type="text" class="form-input" id="urg-nume" placeholder="Popescu">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prenume *</label>
+            <input type="text" class="form-input" id="urg-prenume" placeholder="Ion">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Telefon (07XXXXXXXX) *</label>
+            <input type="text" class="form-input" id="urg-tel" placeholder="0712345678" maxlength="10">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gmail *</label>
+            <input type="email" class="form-input" id="urg-email" placeholder="pacient@gmail.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zona afectată</label>
+          <input type="text" class="form-input" id="urg-zona" placeholder="ex: piept, cap, piele, rinichi...">
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="startTriaj()">
+          ▶ Începe evaluarea →
+        </button>
+      </div>
+      <!-- step 2: intrebari -->
+      <div id="urg-step2" style="display:none">
+        <div style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:0.82rem;font-weight:600;color:var(--muted)">Progres evaluare</span>
+            <span style="font-size:0.82rem;font-weight:600;color:var(--navy)" id="urg-progress-text">0 / 20</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="urg-progress-bar"></div>
+          </div>
+        </div>
+        <div id="urg-questions-container"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:16px" id="btn-calc-triaj" onclick="calculeazaTriaj()" disabled>
+          🔍 Calculează codul de urgență
+        </button>
+      </div>
+      <!-- result -->
+      <div id="urg-result" class="urgency-result"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONSULTATIE MODAL -->
+<div class="modal-overlay" id="modal-consultatie">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🩺 Prezentare Singur</div>
+        <div class="modal-subtitle">Evaluare simptome – se decide internarea</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-consultatie')">✕</button>
+    </div>
+    <div class="modal-line" style="margin-top:20px"></div>
+    <div class="modal-body">
+      <div id="cons-step1">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nume *</label>
+            <input type="text" class="form-input" id="cons-nume">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prenume *</label>
+            <input type="text" class="form-input" id="cons-prenume">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Gmail *</label>
+            <input type="email" class="form-input" id="cons-email" placeholder="@gmail.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefon *</label>
+            <input type="text" class="form-input" id="cons-tel" placeholder="07XXXXXXXX">
+          </div>
+        </div>
+        <button class="btn btn-green" style="width:100%;justify-content:center" onclick="startConsultatie()">
+          ▶ Începe evaluarea medicală →
+        </button>
+      </div>
+      <div id="cons-step2" style="display:none">
+        <div id="cons-questions-container"></div>
+        <button class="btn btn-green" style="width:100%;justify-content:center;margin-top:16px" onclick="calculeazaConsultatie()">
+          🩺 Evaluare finală
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRAMARE MODAL (multi-step) -->
+<div class="modal-overlay" id="modal-programare">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📅 Programare Nouă</div>
+        <div class="modal-subtitle">Consultație planificată la specialist</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-programare')">✕</button>
+    </div>
+    <div class="modal-line" style="margin-top:20px"></div>
+    <div class="modal-body">
+      <div class="steps" id="prog-steps">
+        <div class="step active" id="prog-step-1"><div class="step-circle">1</div><div class="step-label">Secție</div></div>
+        <div class="step"        id="prog-step-2"><div class="step-circle">2</div><div class="step-label">Medic & Dată</div></div>
+        <div class="step"        id="prog-step-3"><div class="step-circle">3</div><div class="step-label">Date personale</div></div>
+        <div class="step"        id="prog-step-4"><div class="step-circle">4</div><div class="step-label">Confirmare</div></div>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="prog-s1">
+        <div class="form-group">
+          <label class="form-label">Selectați secția</label>
+          <select class="form-select" id="prog-sectie" onchange="updateBoli()">
+            <option value="">– Alegeți –</option>
+            <option>Cardiologie</option>
+            <option>Neurologie</option>
+            <option>Urologie</option>
+            <option>Stomatologie</option>
+            <option>Dermatologie</option>
+          </select>
+        </div>
+        <div class="form-group" id="prog-boala-group" style="display:none">
+          <label class="form-label">Selectați boala / afecțiunea</label>
+          <select class="form-select" id="prog-boala"></select>
+        </div>
+        <div class="form-group" id="prog-medic-group" style="display:none">
+          <label class="form-label">Selectați medicul</label>
+          <select class="form-select" id="prog-medic"></select>
+        </div>
+        <button class="btn btn-navy" onclick="progNext(2)" style="width:100%;justify-content:center">Continuă →</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="prog-s2" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Luna</label>
+            <select class="form-select" id="prog-luna">
+              <option value="4">Aprilie 2026</option>
+              <option value="5">Mai 2026</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ziua</label>
+            <input type="number" class="form-input" id="prog-zi" min="1" max="31" placeholder="ex: 15">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ora</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px" id="prog-ore-container">
+            <!-- filled by JS -->
+          </div>
+        </div>
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-outline" onclick="progNext(1)" style="flex:1;justify-content:center">← Înapoi</button>
+          <button class="btn btn-navy" onclick="progNext(3)" style="flex:2;justify-content:center">Continuă →</button>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="prog-s3" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nume *</label>
+            <input type="text" class="form-input" id="prog-nume">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prenume *</label>
+            <input type="text" class="form-input" id="prog-prenume">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Gmail *</label>
+            <input type="email" class="form-input" id="prog-email" placeholder="@gmail.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefon *</label>
+            <input type="text" class="form-input" id="prog-tel" placeholder="07XXXXXXXX" maxlength="10">
+          </div>
+        </div>
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-outline" onclick="progNext(2)" style="flex:1;justify-content:center">← Înapoi</button>
+          <button class="btn btn-navy" onclick="progNext(4)" style="flex:2;justify-content:center">Verifică →</button>
+        </div>
+      </div>
+
+      <!-- Step 4 confirm -->
+      <div id="prog-s4" style="display:none">
+        <div id="prog-summary" style="background:var(--ice);border-radius:14px;padding:20px 24px;margin-bottom:20px;border:1px solid var(--border);line-height:2;font-size:0.92rem"></div>
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-outline" onclick="progNext(3)" style="flex:1;justify-content:center">← Înapoi</button>
+          <button class="btn btn-green" onclick="confirmaPrograname()" style="flex:2;justify-content:center">✅ Confirmă Programarea</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ANULARE MODAL -->
+<div class="modal-overlay" id="modal-anulare">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">❌ Anulare Programare</div>
+        <div class="modal-subtitle">Introduceți datele și codul de anulare</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-anulare')">✕</button>
+    </div>
+    <div class="modal-line" style="margin-top:20px"></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nume</label>
+          <input type="text" class="form-input" id="anul-nume">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prenume</label>
+          <input type="text" class="form-input" id="anul-prenume">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cod anulare (#XXXXXX)</label>
+        <input type="text" class="form-input" id="anul-cod" placeholder="#123456">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;background:var(--red)" onclick="anuleazaProgramare()">
+        Anulează Programarea
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     POPUP (success / error / warning)
+════════════════════════════════════════ -->
+<div class="popup-overlay" id="global-popup">
+  <div class="popup">
+    <div class="popup-icon" id="popup-icon">✅</div>
+    <h2 id="popup-title">Titlu</h2>
+    <p id="popup-desc">Descriere</p>
+    <div class="popup-details" id="popup-details" style="display:none"></div>
+    <div class="popup-actions">
+      <button class="btn btn-navy" onclick="closePopup()" id="popup-btn-primary">OK</button>
+      <button class="btn btn-outline" onclick="closePopup()" id="popup-btn-secondary" style="display:none">Închide</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <strong>Spital Central</strong> · Sistem de Gestionare Medicală · © 2026 · Toate drepturile rezervate
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════
+const SECTII = {
+  'Cardiologie':  { boli: ['Hipertensiune', 'Aritmie', 'Angina pectorala', 'Infarct'], medici: ['Dr. Ionescu Mihai', 'Dr. Popa Elena'] },
+  'Neurologie':   { boli: ['Epilepsie', 'Parkinson', 'Alzheimer', 'Migrena cronica'], medici: ['Dr. Vasilescu Radu', 'Dr. Dima Anca'] },
+  'Urologie':     { boli: ['Cistita', 'Prostatita', 'Litiaza renala', 'Infectie urinara'], medici: ['Dr. Marin Costin', 'Dr. Grigore Sorin'] },
+  'Stomatologie': { boli: ['Carie dentara', 'Gingivita', 'Parodontoza', 'Pulpita', 'Abces dentar'], medici: ['Dr. Neagu Ioana', 'Dr. Balan Cristian'] },
+  'Dermatologie': { boli: ['Eczema', 'Acnee', 'Psoriazis', 'Dermatita atopica', 'Melanom'], medici: ['Dr. Stefan Mihaela', 'Dr. Tudor Adrian'] },
+};
+
+const CAMERE = {
+  'Cardiologie': {start:1, end:50, etaj:1},
+  'Neurologie':  {start:51, end:100, etaj:1},
+  'Urologie':    {start:101, end:150, etaj:2},
+  'Stomatologie':{start:151, end:200, etaj:2},
+  'Dermatologie':{start:201, end:250, etaj:3},
+};
+
+let progData = {
+  sectie:'', boala:'', medic:'', luna:4, zi:0, ora:'',
+  nume:'', prenume:'', email:'', tel:'', cod:''
+};
+
+let triajAnswers = {};
+let consAnswers  = {};
+
+// Intrebari triaj
+const TRIAJ_QS = [
+  {id:'q1',  grp:'Simptome critice',   text:'Aveți durere foarte puternică în piept sau senzație de strângere/presiune?'},
+  {id:'q2',  grp:'Simptome critice',   text:'Vă este greu să respirați sau simțiți că nu aveți aer?'},
+  {id:'q3',  grp:'Simptome critice',   text:'Ați leșinat, v-ați pierdut cunoștința sau aveți convulsii?'},
+  {id:'q4',  grp:'Simptome critice',   text:'Aveți vreun membru al corpului paralizat sau amorțit brusc?'},
+  {id:'q5',  grp:'Simptome critice',   text:'Aveți o hemoragie (sângerare) care nu se oprește?'},
+  {id:'q6',  grp:'Simptome critice',   text:'Aveți dureri de cap extrem de severe, brusc apărute?'},
+  {id:'q7',  grp:'Simptome urgente',   text:'Aveți febră mare (peste 39 grade) sau frisoane puternice?'},
+  {id:'q8',  grp:'Simptome urgente',   text:'Aveți vărsături repetate sau diaree severă?'},
+  {id:'q9',  grp:'Simptome urgente',   text:'Aveți o fractură sau os rupt (posibil)?'},
+  {id:'q10', grp:'Simptome urgente',   text:'Aveți dureri abdominale puternice?'},
+  {id:'q11', grp:'Simptome urgente',   text:'Aveți o reacție alergică severă (umflarea feței, buzelor, gâtului)?'},
+  {id:'q12', grp:'Simptome urgente',   text:'Aveți tensiunea arterială foarte mare sau foarte mică (amețeli severe)?'},
+  {id:'q13', grp:'Factori de risc',    text:'Aveți boli cardiovasculare diagnosticate (inimă, artere)?'},
+  {id:'q14', grp:'Factori de risc',    text:'Aveți diabet și acum aveți glicemia foarte mare sau foarte mică?'},
+  {id:'q15', grp:'Factori de risc',    text:'Simptomele au apărut brusc (sub 1 oră) și se agravează rapid?'},
+  {id:'q16', grp:'Simptome moderate',  text:'Aveți dureri moderate care nu dispar de mai multe zile?'},
+  {id:'q17', grp:'Simptome moderate',  text:'Aveți erupții cutanate, mâncărimi sau modificări ale pielii?'},
+  {id:'q18', grp:'Simptome moderate',  text:'Aveți probleme dentare (dureri de dinți, gingii, abces)?'},
+  {id:'q19', grp:'Simptome moderate',  text:'Aveți probleme urinare (durere la urinat, frecvență mare, sânge)?'},
+  {id:'q20', grp:'Simptome moderate',  text:'Aveți dureri de cap frecvente sau tulburări de vedere?'},
+];
+
+const TRIAJ_SCORES = {q1:10,q2:8,q3:10,q4:9,q5:10,q6:8,q7:4,q8:3,q9:5,q10:4,q11:7,q12:5,q13:3,q14:5,q15:4,q16:2,q17:1,q18:2,q19:2,q20:2};
+
+const CONS_QS = [
+  {id:'c1',  grp:'Cardiovascular',  text:'Aveți dureri sau presiune în zona pieptului?', spec:'Cardiologie', pts:3},
+  {id:'c2',  grp:'Cardiovascular',  text:'Aveți palpitații sau bătăi neregulate ale inimii?', spec:'Cardiologie', pts:2},
+  {id:'c3',  grp:'Cardiovascular',  text:'Vi s-a măsurat tensiunea arterială crescută recent?', spec:'Cardiologie', pts:2},
+  {id:'c4',  grp:'Neurologic',      text:'Aveți dureri de cap frecvente sau migrene?', spec:'Neurologie', pts:2},
+  {id:'c5',  grp:'Neurologic',      text:'Aveți tulburări de vedere, vorbire sau mers?', spec:'Neurologie', pts:3},
+  {id:'c6',  grp:'Neurologic',      text:'Aveți amorțeli sau slăbiciune în membre?', spec:'Neurologie', pts:2},
+  {id:'c7',  grp:'Urinar / Renal',  text:'Aveți dureri la urinat sau sânge în urină?', spec:'Urologie', pts:3},
+  {id:'c8',  grp:'Urinar / Renal',  text:'Aveți dureri în zona lombară / rinichi?', spec:'Urologie', pts:2},
+  {id:'c9',  grp:'Urinar / Renal',  text:'Aveți probleme cu prostata sau infecții urinare repetate?', spec:'Urologie', pts:2},
+  {id:'c10', grp:'Stomatologie',    text:'Aveți dureri dentare sau la maxilar?', spec:'Stomatologie', pts:3},
+  {id:'c11', grp:'Stomatologie',    text:'Aveți gingii care sângerează sau umflate?', spec:'Stomatologie', pts:2},
+  {id:'c12', grp:'Stomatologie',    text:'Aveți abces sau umflătură în zona gurii?', spec:'Stomatologie', pts:3},
+  {id:'c13', grp:'Dermatologie',    text:'Aveți erupții cutanate sau mâncărimi persistente?', spec:'Dermatologie', pts:3},
+  {id:'c14', grp:'Dermatologie',    text:'Aveți alunițe sau formațiuni noi pe piele?', spec:'Dermatologie', pts:2},
+  {id:'c15', grp:'Dermatologie',    text:'Aveți răni care nu se vindecă sau psoriazis?', spec:'Dermatologie', pts:2},
+  {id:'c16', grp:'Stare generală',  text:'Ați slăbit rapid și neintențional în ultimele luni?', spec:'General', pts:3},
+  {id:'c17', grp:'Stare generală',  text:'Aveți oboseală extremă sau lipsă de energie accentuată?', spec:'General', pts:2},
+  {id:'c18', grp:'Stare generală',  text:'Aveți febră care persistă mai mult de 3 zile?', spec:'General', pts:3},
+];
+
+// Programari stocate (in-memory)
+let programari = JSON.parse(localStorage.getItem('programari') || '[]');
+let internati   = JSON.parse(localStorage.getItem('internati')   || '[]');
+let facturi     = JSON.parse(localStorage.getItem('facturi')     || '[]');
+
+// ═══════════════════════════════════════════════════
+//  PAGE NAVIGATION
+// ═══════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target === el) closeModal(el.id); });
+});
+
+// ═══════════════════════════════════════════════════
+//  POPUP
+// ═══════════════════════════════════════════════════
+function showPopup({icon, iconClass, title, desc, details, btnText, onConfirm, secondaryBtn}) {
+  const el = document.getElementById('global-popup');
+  const ic = document.getElementById('popup-icon');
+  ic.textContent = icon || '✅';
+  ic.className   = 'popup-icon ' + (iconClass || 'success');
+  document.getElementById('popup-title').textContent = title || '';
+  document.getElementById('popup-desc').textContent  = desc  || '';
+  const det = document.getElementById('popup-details');
+  if (details) { det.innerHTML = details; det.style.display = 'block'; }
+  else det.style.display = 'none';
+  const btnP = document.getElementById('popup-btn-primary');
+  btnP.textContent = btnText || 'OK';
+  if (onConfirm) btnP.onclick = () => { closePopup(); onConfirm(); };
+  else           btnP.onclick = closePopup;
+  const btnS = document.getElementById('popup-btn-secondary');
+  if (secondaryBtn) { btnS.textContent = secondaryBtn; btnS.style.display = 'inline-flex'; }
+  else btnS.style.display = 'none';
+  el.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closePopup() {
+  document.getElementById('global-popup').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ═══════════════════════════════════════════════════
+//  CONFETTI
+// ═══════════════════════════════════════════════════
+function launchConfetti() {
+  const colors = ['#C0392B','#E67E22','#27AE60','#3498DB','#9B59B6','#F1C40F'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `
+      left:${Math.random()*100}vw;
+      top:-10px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      width:${Math.random()*10+5}px;
+      height:${Math.random()*10+5}px;
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+      animation-duration:${Math.random()*2+2}s;
+      animation-delay:${Math.random()*0.8}s;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════
+function genCod() {
+  return '#' + Math.floor(100000 + Math.random() * 900000);
+}
+function genFactCod() {
+  return 'FACT-' + Math.floor(100000 + Math.random() * 900000);
+}
+function alocaCamera(spec) {
+  const info = CAMERE[spec] || {start:251, end:300, etaj:3};
+  const ocupate = internati.map(i => i.camera);
+  for (let c = info.start; c <= info.end; c++) {
+    if (!ocupate.includes(c)) return {camera: c, etaj: info.etaj};
+  }
+  for (let c = 251; c <= 300; c++) {
+    if (!ocupate.includes(c)) return {camera: c, etaj: 3};
+  }
+  return {camera: 999, etaj: 3};
+}
+function saveAll() {
+  localStorage.setItem('programari', JSON.stringify(programari));
+  localStorage.setItem('internati',  JSON.stringify(internati));
+  localStorage.setItem('facturi',    JSON.stringify(facturi));
+}
+function updateCounters() {
+  const r = internati.filter(i=>i.urgenta==='ROSU').length;
+  const o = internati.filter(i=>i.urgenta==='PORTOCALIU').length;
+  const g = programari.length;
+  document.getElementById('cnt-red').textContent    = r;
+  document.getElementById('cnt-orange').textContent = o;
+  document.getElementById('cnt-green').textContent  = g;
+}
+
+// ═══════════════════════════════════════════════════
+//  AMBULANTA
+// ═══════════════════════════════════════════════════
+function proceseazaAmbulanta() {
+  const nume    = document.getElementById('amb-nume').value.trim();
+  const prenume = document.getElementById('amb-prenume').value.trim();
+  if (!nume || !prenume) {
+    showPopup({icon:'⚠️', iconClass:'warning', title:'Date incomplete', desc:'Introduceți cel puțin numele și prenumele pacientului.'});
+    return;
+  }
+  const tip   = document.getElementById('amb-tip').value;
+  const asig  = document.getElementById('amb-asig').value;
+  const email = document.getElementById('amb-email').value;
+
+  const tipMap = {cardiac:'Stop cardiac / Infarct', neuro:'AVC / Traumă neurologică', trauma:'Traumă / Accident', other:'Urgență vitală neclarificată'};
+  const specMap= {cardiac:'Cardiologie', neuro:'Neurologie', trauma:'Urologie', other:'Cardiologie'};
+  const boala  = tipMap[tip];
+  const spec   = specMap[tip];
+
+  const cod = genCod();
+  let cost = 4500;
+  if (asig === 'da') cost *= 0.5;
+  const codFact = genFactCod();
+
+  const camInfo = alocaCamera(spec);
+  const mergeOp = (tip === 'cardiac' || tip === 'neuro' || tip === 'trauma');
+
+  // Simuleaza operatie
+  const sansa = Math.random() * 100;
+  let rezultat, rezultatClass;
+  if (sansa < 2) {
+    rezultat = '😢 Din nefericire, pacientul a <strong>decedat</strong> în urma complicațiilor. Condoleanțe familiei.';
+    rezultatClass = 'error';
+  } else if (sansa < 62) {
+    rezultat = '🎉 Operație reușită! Pacientul este <strong>vindecat</strong> și poate fi externat.';
+    rezultatClass = 'success';
+  } else {
+    const zile = Math.floor(Math.random()*14)+3;
+    rezultat = `🏥 Operație reușită! Pacientul necesită monitorizare și va rămâne internat încă <strong>${zile} zile</strong>.`;
+    rezultatClass = 'info';
+  }
+
+  internati.push({numeP:nume, prenumeP:prenume, telefonP:'-', boala, urgenta:'ROSU', medicNume:'Dr. de Gardă', medicSpec:spec, camera:camInfo.camera, etaj:camInfo.etaj, cod});
+  if (email) facturi.push({numeP:nume, prenumeP:prenume, emailP:email, codFactura:codFact, serviciu:'Intervenție chirurgicală urgență (Ambulanță)', suma:cost, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
+  saveAll(); updateCounters();
+
+  closeModal('modal-ambulanta');
+
+  showPopup({
+    icon: sansa < 2 ? '😢' : '🚑',
+    iconClass: rezultatClass,
+    title: sansa < 2 ? 'Pacient Decedat' : 'Pacient Internat – Cod Roșu',
+    desc: ``,
+    details: `
+      <strong>Pacient:</strong> ${nume} ${prenume}<br>
+      <strong>Diagnostic:</strong> ${boala}<br>
+      <strong>Cameră alocată:</strong> ${mergeOp ? 'Sala de Operații – Subsol' : camInfo.camera + ' (Etaj ' + camInfo.etaj + ')'}<br>
+      <strong>Cod internare:</strong> ${cod}<br>
+      <strong>Rezultat operație:</strong> ${rezultat.replace(/<[^>]+>/g,'')} <br>
+      ${email ? '<strong>Factură trimisă pe:</strong> ' + email + '<br><strong>Cod factură:</strong> ' + codFact + '<br><strong>Sumă:</strong> ' + cost.toFixed(2) + ' RON' : ''}
+    `,
+    btnText: 'OK'
+  });
+  if (sansa >= 2) launchConfetti();
+}
+
+// ═══════════════════════════════════════════════════
+//  TRIAJ DE URGENTA
+// ═══════════════════════════════════════════════════
+function startTriaj() {
+  const n = document.getElementById('urg-nume').value.trim();
+  const p = document.getElementById('urg-prenume').value.trim();
+  if (!n || !p) { showPopup({icon:'⚠️',iconClass:'warning',title:'Date incomplete',desc:'Completați numele și prenumele.'}); return; }
+
+  triajAnswers = {};
+  document.getElementById('urg-step1').style.display = 'none';
+  document.getElementById('urg-step2').style.display = 'block';
+  document.getElementById('urg-result').className = 'urgency-result';
+  document.getElementById('btn-calc-triaj').disabled = true;
+
+  const cont = document.getElementById('urg-questions-container');
+  cont.innerHTML = '';
+  let lastGrp = '';
+  TRIAJ_QS.forEach((q, idx) => {
+    if (q.grp !== lastGrp) {
+      lastGrp = q.grp;
+      const gd = document.createElement('div');
+      gd.style.cssText = 'font-size:0.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;';
+      gd.textContent = q.grp;
+      cont.appendChild(gd);
+    }
+    const el = document.createElement('div');
+    el.className = 'triaj-question';
+    el.id = 'tq-' + q.id;
+    el.innerHTML = `
+      <div class="triaj-q-text">${idx+1}. ${q.text}</div>
+      <div class="triaj-btns">
+        <button class="triaj-btn yes" onclick="answerTriaj('${q.id}',true)">Da</button>
+        <button class="triaj-btn no"  onclick="answerTriaj('${q.id}',false)">Nu</button>
+      </div>`;
+    cont.appendChild(el);
+  });
+  updateTriajProgress();
+}
+
+function answerTriaj(qid, val) {
+  triajAnswers[qid] = val;
+  const el = document.getElementById('tq-' + qid);
+  el.classList.remove('answered-yes','answered-no');
+  el.classList.add(val ? 'answered-yes' : 'answered-no');
+  el.querySelectorAll('.triaj-btn').forEach(b => b.classList.remove('selected'));
+  el.querySelector('.triaj-btn.' + (val?'yes':'no')).classList.add('selected');
+  updateTriajProgress();
+  if (Object.keys(triajAnswers).length === TRIAJ_QS.length)
+    document.getElementById('btn-calc-triaj').disabled = false;
+}
+
+function updateTriajProgress() {
+  const n = Object.keys(triajAnswers).length;
+  document.getElementById('urg-progress-text').textContent = n + ' / 20';
+  document.getElementById('urg-progress-bar').style.width = (n/20*100) + '%';
+}
+
+function calculeazaTriaj() {
+  let score = 0;
+  for (const [qid, val] of Object.entries(triajAnswers))
+    if (val) score += TRIAJ_SCORES[qid] || 0;
+
+  const n = document.getElementById('urg-nume').value.trim();
+  const p = document.getElementById('urg-prenume').value.trim();
+  const e = document.getElementById('urg-email').value.trim();
+  const zona = document.getElementById('urg-zona').value.trim();
+
+  let cls, title, desc, urgText;
+  if (score >= 8) {
+    cls = 'ur-red'; title = '🔴 COD ROȘU'; urgText = 'ROSU';
+    desc = 'Simptomele indicate prezintă risc vital imediat. Pacientul este internat imediat.';
+  } else if (score >= 4) {
+    cls = 'ur-orange'; title = '🟠 COD PORTOCALIU'; urgText = 'PORTOCALIU';
+    desc = 'Simptome urgente detectate. Pacientul necesită evaluare rapidă și posibilă internare.';
+  } else {
+    cls = 'ur-green'; title = '🟢 COD VERDE'; urgText = 'VERDE';
+    desc = 'Simptome moderate. Consultație standard recomandată, fără internare imediată.';
+  }
+
+  const res = document.getElementById('urg-result');
+  res.className = 'urgency-result show ' + cls;
+  res.innerHTML = `
+    <div class="ur-title">${title}</div>
+    <div class="ur-desc">${desc}</div>
+    <div class="ur-score">Scor evaluare: ${score} puncte</div>
+  `;
+
+  if (urgText !== 'VERDE') {
+    const camInfo = alocaCamera(zona.includes('inima')||zona.includes('piept') ? 'Cardiologie' : 'Neurologie');
+    const cod = genCod();
+    internati.push({numeP:n, prenumeP:p, telefonP:'-', boala:'Urgență triaj', urgenta:urgText, medicNume:'Dr. de Gardă', medicSpec:'General', camera:camInfo.camera, etaj:camInfo.etaj, cod});
+
+    const codFact = genFactCod();
+    const sumaFact = urgText === 'ROSU' ? 3200 : 1200;
+    if (e) facturi.push({numeP:n, prenumeP:p, emailP:e, codFactura:codFact, serviciu:'Internare urgență ' + urgText.toLowerCase(), suma:sumaFact, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
+    saveAll(); updateCounters();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  CONSULTATIE
+// ═══════════════════════════════════════════════════
+function startConsultatie() {
+  const n = document.getElementById('cons-nume').value.trim();
+  const p = document.getElementById('cons-prenume').value.trim();
+  const e = document.getElementById('cons-email').value.trim();
+  if (!n || !p || !e.includes('@gmail')) {
+    showPopup({icon:'⚠️',iconClass:'warning',title:'Date incomplete',desc:'Completați toate câmpurile obligatorii cu o adresă Gmail validă.'}); return;
+  }
+  consAnswers = {};
+  document.getElementById('cons-step1').style.display = 'none';
+  document.getElementById('cons-step2').style.display = 'block';
+
+  const cont = document.getElementById('cons-questions-container');
+  cont.innerHTML = '';
+  let lastGrp = '';
+  CONS_QS.forEach((q, idx) => {
+    if (q.grp !== lastGrp) {
+      lastGrp = q.grp;
+      const gd = document.createElement('div');
+      gd.style.cssText = 'font-size:0.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;';
+      gd.textContent = q.grp;
+      cont.appendChild(gd);
+    }
+    const el = document.createElement('div');
+    el.className = 'triaj-question';
+    el.id = 'cq-' + q.id;
+    el.innerHTML = `
+      <div class="triaj-q-text">${idx+1}. ${q.text}</div>
+      <div class="triaj-btns">
+        <button class="triaj-btn yes" onclick="answerCons('${q.id}',true)">Da</button>
+        <button class="triaj-btn no"  onclick="answerCons('${q.id}',false)">Nu</button>
+      </div>`;
+    cont.appendChild(el);
+  });
+}
+
+function answerCons(qid, val) {
+  consAnswers[qid] = val;
+  const el = document.getElementById('cq-' + qid);
+  el.classList.remove('answered-yes','answered-no');
+  el.classList.add(val ? 'answered-yes' : 'answered-no');
+  el.querySelectorAll('.triaj-btn').forEach(b => b.classList.remove('selected'));
+  el.querySelector('.triaj-btn.' + (val?'yes':'no')).classList.add('selected');
+}
+
+function calculeazaConsultatie() {
+  const n = document.getElementById('cons-nume').value.trim();
+  const p = document.getElementById('cons-prenume').value.trim();
+  const e = document.getElementById('cons-email').value.trim();
+
+  let ptsInternare = 0;
+  const specPts = {};
+  for (const [cid, val] of Object.entries(consAnswers)) {
+    if (!val) continue;
+    const q = CONS_QS.find(x => x.id === cid);
+    if (!q) continue;
+    ptsInternare += q.pts;
+    if (q.spec !== 'General') specPts[q.spec] = (specPts[q.spec]||0) + q.pts;
+  }
+
+  const bestSpec = Object.entries(specPts).sort((a,b)=>b[1]-a[1])[0];
+  const specFinal = bestSpec ? bestSpec[0] : 'Cardiologie';
+
+  const necesitaInternare = ptsInternare >= 6;
+  const codFact = genFactCod();
+  const suma = necesitaInternare ? 1200 : 150;
+  facturi.push({numeP:n, prenumeP:p, emailP:e, codFactura:codFact, serviciu: necesitaInternare ? 'Internare ' + specFinal : 'Consultație ambulatorie ' + specFinal, suma, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
+
+  if (necesitaInternare) {
+    const camInfo = alocaCamera(specFinal);
+    const cod = genCod();
+    internati.push({numeP:n, prenumeP:p, telefonP:'-', boala:'Consultație → internare', urgenta:'PORTOCALIU', medicNume:'Dr. de Gardă', medicSpec:specFinal, camera:camInfo.camera, etaj:camInfo.etaj, cod});
+    saveAll(); updateCounters();
+    closeModal('modal-consultatie');
+    launchConfetti();
+    showPopup({
+      icon:'🏥', iconClass:'warning',
+      title:'Internare recomandată!',
+      desc:'În urma evaluării, simptomele dumneavoastră necesită supraveghere medicală.',
+      details:`<strong>Pacient:</strong> ${n} ${p}<br><strong>Secție:</strong> ${specFinal}<br><strong>Cameră:</strong> ${camInfo.camera} (Etaj ${camInfo.etaj})<br><strong>Factură trimisă pe:</strong> ${e}<br><strong>Cod factură:</strong> ${codFact}<br><strong>Sumă:</strong> ${suma.toFixed(2)} RON`,
+      btnText:'OK'
+    });
+  } else {
+    saveAll();
+    closeModal('modal-consultatie');
+    showPopup({
+      icon:'🟢', iconClass:'success',
+      title:'Consultație ambulatorie',
+      desc:'Nu este necesară internarea. Vă recomandăm o programare la medicul specialist.',
+      details:`<strong>Pacient:</strong> ${n} ${p}<br><strong>Secție recomandată:</strong> ${specFinal}<br><strong>Factură trimisă pe:</strong> ${e}<br><strong>Cod factură:</strong> ${codFact}<br><strong>Sumă:</strong> ${suma.toFixed(2)} RON`,
+      btnText:'OK'
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  PROGRAMARE MULTI-STEP
+// ═══════════════════════════════════════════════════
+function updateBoli() {
+  const s = document.getElementById('prog-sectie').value;
+  if (!s) return;
+  const bg = document.getElementById('prog-boala-group');
+  const mg = document.getElementById('prog-medic-group');
+  bg.style.display = 'block'; mg.style.display = 'block';
+  const bs = document.getElementById('prog-boala');
+  const ms = document.getElementById('prog-medic');
+  bs.innerHTML = SECTII[s].boli.map(b => `<option>${b}</option>`).join('');
+  ms.innerHTML = SECTII[s].medici.map(m => `<option>${m}</option>`).join('');
+
+  // Fill ore
+  const oreC = document.getElementById('prog-ore-container');
+  const ore  = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00'];
+  oreC.innerHTML = ore.map(o => `
+    <button type="button" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--border);background:white;font-family:var(--font-body);font-size:0.85rem;cursor:pointer;transition:all .2s;font-weight:500"
+      onclick="selectOra(this,'${o}')">${o}</button>
+  `).join('');
+}
+
+let selectedOra = '';
+function selectOra(btn, ora) {
+  document.querySelectorAll('#prog-ore-container button').forEach(b => {
+    b.style.background = 'white';
+    b.style.borderColor = 'var(--border)';
+    b.style.color = 'var(--text)';
+  });
+  btn.style.background = 'var(--navy)';
+  btn.style.borderColor = 'var(--navy)';
+  btn.style.color = 'white';
+  selectedOra = ora;
+}
+
+function progNext(step) {
+  // Validate current step
+  if (step === 2) {
+    const s = document.getElementById('prog-sectie').value;
+    if (!s) { showPopup({icon:'⚠️',iconClass:'warning',title:'Selectați secția',desc:'Alegeți o secție medicală pentru a continua.'}); return; }
+    progData.sectie = s;
+    progData.boala  = document.getElementById('prog-boala').value;
+    progData.medic  = document.getElementById('prog-medic').value;
+  }
+  if (step === 3) {
+    const zi = parseInt(document.getElementById('prog-zi').value);
+    if (!zi || zi < 1 || zi > 31) { showPopup({icon:'⚠️',iconClass:'warning',title:'Dată invalidă',desc:'Introduceți o zi validă (1-31).'}); return; }
+    if (!selectedOra) { showPopup({icon:'⚠️',iconClass:'warning',title:'Selectați ora',desc:'Alegeți un slot orar disponibil.'}); return; }
+    progData.luna = parseInt(document.getElementById('prog-luna').value);
+    progData.zi   = zi; progData.ora = selectedOra;
+  }
+  if (step === 4) {
+    const n = document.getElementById('prog-nume').value.trim();
+    const p = document.getElementById('prog-prenume').value.trim();
+    const e = document.getElementById('prog-email').value.trim();
+    const t = document.getElementById('prog-tel').value.trim();
+    if (!n || !p) { showPopup({icon:'⚠️',iconClass:'warning',title:'Date incomplete',desc:'Completați numele și prenumele.'}); return; }
+    if (!e.includes('@gmail.com')) { showPopup({icon:'⚠️',iconClass:'warning',title:'Email invalid',desc:'Adresa trebuie să se termine cu @gmail.com'}); return; }
+    if (!/^07\d{8}$/.test(t)) { showPopup({icon:'⚠️',iconClass:'warning',title:'Telefon invalid',desc:'Introduceți un număr valid (07XXXXXXXX, 10 cifre).'}); return; }
+    progData.nume = n; progData.prenume = p; progData.email = e; progData.tel = t;
+    const lunaName = progData.luna === 4 ? 'Aprilie' : 'Mai';
+    document.getElementById('prog-summary').innerHTML = `
+      <strong>Secție:</strong> ${progData.sectie}<br>
+      <strong>Boală:</strong> ${progData.boala}<br>
+      <strong>Medic:</strong> ${progData.medic}<br>
+      <strong>Data:</strong> ${progData.zi} ${lunaName} 2026 | <strong>Ora:</strong> ${progData.ora}<br>
+      <strong>Pacient:</strong> ${n} ${p}<br>
+      <strong>Gmail:</strong> ${e}<br>
+      <strong>Telefon:</strong> ${t}
+    `;
+  }
+
+  // Show correct step
+  [1,2,3,4].forEach(i => {
+    document.getElementById('prog-s'+i).style.display = i === step ? 'block' : 'none';
+    const sc = document.getElementById('prog-step-'+i);
+    sc.className = 'step' + (i < step ? ' done' : i === step ? ' active' : '');
+  });
+}
+
+function confirmaPrograname() {
+  const cod = genCod();
+  progData.cod = cod;
+
+  programari.push({...progData});
+
+  const codFact = genFactCod();
+  facturi.push({numeP:progData.nume, prenumeP:progData.prenume, emailP:progData.email, codFactura:codFact, serviciu:'Consultație planificată ' + progData.sectie, suma:238, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
+  saveAll(); updateCounters();
+
+  closeModal('modal-programare');
+  launchConfetti();
+  showPopup({
+    icon:'🎉', iconClass:'success',
+    title:'Programare confirmată!',
+    desc:'Programarea a fost înregistrată cu succes. Veți primi confirmarea pe email.',
+    details:`
+      <strong>Medic:</strong> ${progData.medic}<br>
+      <strong>Data:</strong> ${progData.zi}.${progData.luna}.2026 | Ora: ${progData.ora}<br>
+      <strong>Boală:</strong> ${progData.boala}<br>
+      <strong>Cod anulare:</strong> <code style="background:var(--ice);padding:2px 6px;border-radius:4px;font-size:0.9em">${cod}</code><br>
+      <strong>Factură trimisă pe:</strong> ${progData.email}<br>
+      <strong>Cod factură:</strong> ${codFact} | <strong>Sumă:</strong> 238.00 RON
+    `,
+    btnText:'Excelent!'
+  });
+
+  // Reset form
+  progData = {sectie:'', boala:'', medic:'', luna:4, zi:0, ora:'', nume:'', prenume:'', email:'', tel:'', cod:''};
+  progNext(1);
+}
+
+// ═══════════════════════════════════════════════════
+//  ANULARE PROGRAMARE
+// ═══════════════════════════════════════════════════
+function anuleazaProgramare() {
+  const n   = document.getElementById('anul-nume').value.trim();
+  const p   = document.getElementById('anul-prenume').value.trim();
+  const cod = document.getElementById('anul-cod').value.trim();
+
+  const idx = programari.findIndex(x => x.nume===n && x.prenume===p && x.cod===cod);
+  if (idx === -1) {
+    showPopup({icon:'❌', iconClass:'error', title:'Nu s-a găsit', desc:'Nu există nicio programare cu datele introduse. Verificați codul de anulare.'});
+    return;
+  }
+  const pr = programari[idx];
+  programari.splice(idx, 1);
+  saveAll(); updateCounters();
+  closeModal('modal-anulare');
+  showPopup({
+    icon:'✅', iconClass:'success',
+    title:'Programare anulată',
+    desc:'Programarea a fost anulată cu succes.',
+    details:`<strong>Pacient:</strong> ${n} ${p}<br><strong>Medic:</strong> ${pr.medic}<br><strong>Data:</strong> ${pr.zi}.${pr.luna}.2026 | Ora: ${pr.ora}`,
+    btnText:'OK'
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  ADMIN
+// ═══════════════════════════════════════════════════
+function loginAdmin() {
+  const p = document.getElementById('admin-pass').value;
+  if (p !== '1q2w3e') {
+    document.getElementById('admin-err').classList.add('show');
+    return;
+  }
+  document.getElementById('admin-err').classList.remove('show');
+  document.getElementById('admin-login-wrap').style.display = 'none';
+  document.getElementById('admin-panel-wrap').style.display = 'block';
+  showAdminTab('programari');
+}
+function logoutAdmin() {
+  document.getElementById('admin-login-wrap').style.display = 'block';
+  document.getElementById('admin-panel-wrap').style.display = 'none';
+  document.getElementById('admin-pass').value = '';
+}
+
+function showAdminTab(tab) {
+  document.querySelectorAll('.admin-menu-item').forEach(el => el.classList.remove('active'));
+  event && event.target.classList.add('active');
+  const cont = document.getElementById('admin-content');
+
+  if (tab === 'programari') {
+    cont.innerHTML = `<div class="admin-content-title">📅 Toate Programările</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Pacient</th><th>Secție</th><th>Medic</th><th>Data</th><th>Ora</th><th>Cod</th></tr></thead>
+      <tbody>${programari.length ? programari.map(p=>`<tr>
+        <td>${p.nume} ${p.prenume}</td>
+        <td><span class="badge badge-navy">${p.sectie}</span></td>
+        <td>${p.medic}</td>
+        <td>${p.zi}.${p.luna}.2026</td>
+        <td>${p.ora}</td>
+        <td><code style="font-size:.8em;background:var(--ice);padding:2px 6px;border-radius:4px">${p.cod}</code></td>
+      </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Nu există programări înregistrate</td></tr>'}
+      </tbody></table></div>`;
+  } else if (tab === 'internati') {
+    cont.innerHTML = `<div class="admin-content-title">🛏️ Pacienți Internați</div>
+      <div class="table-wrap"><table><thead><tr><th>Pacient</th><th>Urgență</th><th>Secție</th><th>Cameră</th><th>Medic</th><th>Boală</th></tr></thead>
+      <tbody>${internati.length ? internati.map(i=>`<tr>
+        <td>${i.numeP} ${i.prenumeP}</td>
+        <td><span class="badge badge-${i.urgenta==='ROSU'?'red':i.urgenta==='PORTOCALIU'?'orange':'green'}">${i.urgenta}</span></td>
+        <td>${i.medicSpec}</td>
+        <td>${i.camera} <span style="color:var(--muted);font-size:.82em">(Et.${i.etaj})</span></td>
+        <td>${i.medicNume}</td>
+        <td>${i.boala}</td>
+      </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Nu există pacienți internați</td></tr>'}
+      </tbody></table></div>`;
+  } else if (tab === 'facturi') {
+    cont.innerHTML = `<div class="admin-content-title">💰 Facturi</div>
+      <div style="margin-bottom:16px"><a href="plata.html" target="_blank" class="btn btn-green btn-sm">🔗 Deschide Pagina de Plată</a></div>
+      <div class="table-wrap"><table><thead><tr><th>Pacient</th><th>Serviciu</th><th>Sumă</th><th>Scadență</th><th>Status</th></tr></thead>
+      <tbody>${facturi.length ? facturi.map(f=>`<tr>
+        <td>${f.numeP} ${f.prenumeP}</td>
+        <td style="max-width:200px;font-size:.85em">${f.serviciu}</td>
+        <td><strong>${f.suma.toFixed(2)} RON</strong></td>
+        <td>${f.scadenta||'06.06.2026'}</td>
+        <td><span class="badge badge-${f.achitata?'green':'red'}">${f.achitata?'✅ Achitată':'⏳ Neachitată'}</span></td>
+      </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px">Nu există facturi înregistrate</td></tr>'}
+      </tbody></table></div>`;
+  } else if (tab === 'medici') {
+    cont.innerHTML = `<div class="admin-content-title">👨‍⚕️ Adaugă Cont Medic</div>
+      <div style="max-width:480px">
+        <div class="form-group"><label class="form-label">Nume medic</label><input type="text" class="form-input" id="adm-m-nume" placeholder="ex: Dr. Popescu Ion"></div>
+        <div class="form-group"><label class="form-label">Gmail medic</label><input type="email" class="form-input" id="adm-m-email" placeholder="doctor@gmail.com"></div>
+        <div class="form-group"><label class="form-label">Specializare</label>
+          <select class="form-select" id="adm-m-spec">
+            <option>Cardiologie</option><option>Neurologie</option><option>Urologie</option><option>Stomatologie</option><option>Dermatologie</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Parolă</label><input type="password" class="form-input" id="adm-m-pass" placeholder="Parolă sigură..."></div>
+        <button class="btn btn-navy" onclick="addMedic()">➕ Adaugă Medic</button>
+      </div>`;
+  } else if (tab === 'harta') {
+    cont.innerHTML = `<div class="admin-content-title">🗺️ Harta Spitalului</div>
+      <div style="font-family:monospace;font-size:0.9rem;line-height:2;background:var(--ice);border-radius:12px;padding:28px;border:1px solid var(--border)">
+<pre style="font-family:inherit">  +----------------------------------------------------------+
+  |           SPITAL CENTRAL - HARTA ETAJE                   |
+  +----------------------------------------------------------+
+  |  ETAJ 3  | Dermatologie (201-250) | Rezerva  (251-300)   |
+  +----------------------------------------------------------+
+  |  ETAJ 2  | Urologie     (101-150) | Stomato  (151-200)   |
+  +----------------------------------------------------------+
+  |  ETAJ 1  | Cardiologie  (  1- 50) | Neurolog ( 51-100)   |
+  +----------------------------------------------------------+
+  |  PARTER  | RECEPTIE  | URGENTE  | FARMACIA | LABORATOR   |
+  +----------------------------------------------------------+
+  |  SUBSOL  | SALA OPERATII 1 | SALA OPERATII 2 | MORGA    |
+  +----------------------------------------------------------+</pre>
+      </div>
+      <div class="cards-grid" style="margin-top:24px">
+        ${[['Cardiologie','❤️','Etaj 1, camere 1-50'],['Neurologie','🧠','Etaj 1, camere 51-100'],['Urologie','💧','Etaj 2, camere 101-150'],['Stomatologie','🦷','Etaj 2, camere 151-200'],['Dermatologie','🔬','Etaj 3, camere 201-250'],['Rezervă','🛏️','Etaj 3, camere 251-300']].map(([s,ic,loc])=>`
+        <div class="card" style="padding:20px">
+          <div style="font-size:1.5rem;margin-bottom:8px">${ic}</div>
+          <div class="card-title" style="font-size:1rem">${s}</div>
+          <div class="card-desc" style="font-size:.82rem;margin-bottom:0">${loc}</div>
+        </div>`).join('')}
+      </div>`;
+  }
+}
+
+function addMedic() {
+  const n = document.getElementById('adm-m-nume').value.trim();
+  const e = document.getElementById('adm-m-email').value.trim();
+  if (!n || !e.includes('@gmail.com')) {
+    showPopup({icon:'⚠️',iconClass:'warning',title:'Date incomplete',desc:'Completați toate câmpurile cu o adresă Gmail validă.'});
+    return;
+  }
+  showPopup({icon:'✅',iconClass:'success',title:'Medic adăugat!',desc:`Dr. ${n} a fost înregistrat cu succes în sistem.`});
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+updateCounters();
+progNext(1);
+</script>
+</body>
+</html>
