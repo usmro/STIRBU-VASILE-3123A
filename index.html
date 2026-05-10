@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
   :root {
     --red:     #C0392B;
@@ -112,7 +114,7 @@
     letter-spacing: 0.02em;
   }
   .header-nav a:hover { background: rgba(255,255,255,0.1); color: white; }
-  .header-nav a.active { background: var(--red); color: white; }
+  .header-nav a.active { background: var(--orange); color: white; }
 
   /* ── HERO ── */
   .hero {
@@ -940,6 +942,9 @@
             <div class="status-label">Cod Verde</div>
           </div>
         </div>
+        <!-- mini harta etaje -->
+        <div style="font-family:var(--font-body);font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Harta Interactivă Etaje</div>
+        <div id="hero-map-container" style="margin-bottom:20px;max-height:300px;overflow-y:auto;padding-right:4px;"></div>
         <div class="quick-actions-title">Acțiuni rapide</div>
         <div class="quick-btns">
           <a href="#" class="quick-btn qb-red" onclick="showPage('pacient');openModal('modal-ambulanta');return false;">
@@ -1096,20 +1101,20 @@
       <div class="admin-grid">
         <div class="admin-sidebar">
           <div class="admin-sidebar-title">Gestionare</div>
-          <a class="admin-menu-item active" onclick="showAdminTab('programari')">
+          <a class="admin-menu-item active" onclick="showAdminTab('programari', event)">
             <span class="mi-icon">📅</span> Programări
           </a>
-          <a class="admin-menu-item" onclick="showAdminTab('internati')">
+          <a class="admin-menu-item" onclick="showAdminTab('internati', event)">
             <span class="mi-icon">🛏️</span> Internați
           </a>
-          <a class="admin-menu-item" onclick="showAdminTab('facturi')">
+          <a class="admin-menu-item" onclick="showAdminTab('facturi', event)">
             <span class="mi-icon">💰</span> Facturi
           </a>
           <div class="admin-sidebar-title">Setări</div>
-          <a class="admin-menu-item" onclick="showAdminTab('medici')">
+          <a class="admin-menu-item" onclick="showAdminTab('medici', event)">
             <span class="mi-icon">👨‍⚕️</span> Adaugă Medic
           </a>
-          <a class="admin-menu-item" onclick="showAdminTab('harta')">
+          <a class="admin-menu-item" onclick="showAdminTab('harta', event)">
             <span class="mi-icon">🗺️</span> Hartă Spital
           </a>
           <div class="admin-sidebar-title">Externe</div>
@@ -1317,11 +1322,26 @@
           <label class="form-label">Selectați secția</label>
           <select class="form-select" id="prog-sectie" onchange="updateBoli()">
             <option value="">– Alegeți –</option>
-            <option>Cardiologie</option>
-            <option>Neurologie</option>
-            <option>Urologie</option>
-            <option>Stomatologie</option>
-            <option>Dermatologie</option>
+            <optgroup label="Etaj 1">
+              <option>Cardiologie</option>
+              <option>Neurologie</option>
+            </optgroup>
+            <optgroup label="Etaj 2">
+              <option>Urologie</option>
+              <option>Stomatologie</option>
+            </optgroup>
+            <optgroup label="Etaj 3">
+              <option>Dermatologie</option>
+              <option>Ortopedie</option>
+            </optgroup>
+            <optgroup label="Etaj 4">
+              <option>Oftalmologie</option>
+              <option>ORL</option>
+            </optgroup>
+            <optgroup label="Etaj 5">
+              <option>Gastroenterologie</option>
+              <option>Oncologie</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-group" id="prog-boala-group" style="display:none">
@@ -1340,14 +1360,14 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Luna</label>
-            <select class="form-select" id="prog-luna">
+            <select class="form-select" id="prog-luna" onchange="updateOre()">
               <option value="4">Aprilie 2026</option>
               <option value="5">Mai 2026</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Ziua</label>
-            <input type="number" class="form-input" id="prog-zi" min="1" max="31" placeholder="ex: 15">
+            <input type="number" class="form-input" id="prog-zi" min="1" max="31" placeholder="ex: 15" oninput="updateOre()">
           </div>
         </div>
         <div class="form-group">
@@ -1395,7 +1415,7 @@
         <div id="prog-summary" style="background:var(--ice);border-radius:14px;padding:20px 24px;margin-bottom:20px;border:1px solid var(--border);line-height:2;font-size:0.92rem"></div>
         <div style="display:flex;gap:12px">
           <button class="btn btn-outline" onclick="progNext(3)" style="flex:1;justify-content:center">← Înapoi</button>
-          <button class="btn btn-green" onclick="confirmaPrograname()" style="flex:2;justify-content:center">✅ Confirmă Programarea</button>
+          <button class="btn btn-green" onclick="confirmaProgramare()" style="flex:2;justify-content:center">✅ Confirmă Programarea</button>
         </div>
       </div>
     </div>
@@ -1457,22 +1477,125 @@
 
 <script>
 // ═══════════════════════════════════════════════════
-//  DATA
+//  EMAILJS
+//  1. Creați cont gratuit pe https://www.emailjs.com
+//  2. Adăugați un Service (Gmail) și notați SERVICE_ID
+//  3. Creați un Template și notați TEMPLATE_ID
+//  4. Copiați Public Key din Account → API Keys
+//  5. Înlocuiți valorile de mai jos
 // ═══════════════════════════════════════════════════
+(function(){
+  emailjs.init('DTKSZMu08---RUaMW'); // 🔑 cheia publică din emailjs.com
+})();
+
+const EMAILJS_SERVICE  = 'service_sa03cx3';   // ex: 'service_abc123'
+const EMAILJS_TEMPLATE = 'template_vs34ipx';  // ex: 'template_xyz789'
+
+async function trimiteEmailReal(toEmail, toName, subject, body) {
+  try {
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email: toEmail,
+      to_name:  toName,
+      subject:  subject,
+      message:  body,
+    });
+    console.log('[EmailJS] ✅ Email trimis la', toEmail);
+    return true;
+  } catch (err) {
+    console.warn('[EmailJS] ⚠️ Eroare:', err);
+    return false;
+  }
+}
+
+async function trimiteEmailProgramare(p, codFact) {
+  const body = `
+Stimate ${p.nume} ${p.prenume},
+
+✅ Programarea dumneavoastră a fost confirmată!
+
+📋 DETALII PROGRAMARE:
+• Medic: ${p.medic}
+• Secție: ${p.sectie}
+• Boală: ${p.boala}
+• Data: ${p.zi}.${p.luna}.2026
+• Ora: ${p.ora}
+• Cod anulare: ${p.cod}
+
+🧾 FACTURĂ EMISĂ:
+• Cod factură: ${codFact}
+• Sumă de plată: 238.00 RON (incl. TVA 19%)
+• Scadență: 06.06.2026
+• Plată online: https://spital-central.ro/plata?cod=${codFact}
+
+📍 LOCAȚIE: Spital Central, Str. Sănătății nr. 1, București
+📞 Contact: 021-SANATATE
+
+Vă mulțumim că ați ales Spital Central!
+  `.trim();
+
+  return await trimiteEmailReal(
+    p.email, `${p.nume} ${p.prenume}`,
+    `✅ Confirmare programare – ${p.zi}.${p.luna}.2026 ora ${p.ora}`,
+    body
+  );
+}
+
+async function trimiteEmailFacturaInternare(toEmail, toName, inv) {
+  const body = `
+Stimate ${toName},
+
+🏥 Ați fost înregistrat/ă în sistemul Spitalului Central.
+
+🧾 FACTURĂ MEDICALĂ:
+• Cod factură: ${inv.codFactura}
+• Serviciu: ${inv.serviciu}
+• Sumă de plată: ${Number(inv.suma).toFixed(2)} RON
+• Scadență: ${inv.scadenta || '06.06.2026'}
+• Plată online: https://spital-central.ro/plata?cod=${inv.codFactura}
+
+💳 METODE DE PLATĂ:
+1. Online cu cardul: pagina de plată de mai sus
+2. Virament: RO49AAAA1B31007593840000 (ref: ${inv.codFactura})
+3. Numerar la casierie: L-V 07:00–20:00
+
+📞 Contact: 021-SANATATE | facturare@spital-central.ro
+  `.trim();
+
+  return await trimiteEmailReal(
+    toEmail, toName,
+    `🧾 Factură medicală ${inv.codFactura} – ${Number(inv.suma).toFixed(2)} RON`,
+    body
+  );
+}
 const SECTII = {
-  'Cardiologie':  { boli: ['Hipertensiune', 'Aritmie', 'Angina pectorala', 'Infarct'], medici: ['Dr. Ionescu Mihai', 'Dr. Popa Elena'] },
-  'Neurologie':   { boli: ['Epilepsie', 'Parkinson', 'Alzheimer', 'Migrena cronica'], medici: ['Dr. Vasilescu Radu', 'Dr. Dima Anca'] },
-  'Urologie':     { boli: ['Cistita', 'Prostatita', 'Litiaza renala', 'Infectie urinara'], medici: ['Dr. Marin Costin', 'Dr. Grigore Sorin'] },
-  'Stomatologie': { boli: ['Carie dentara', 'Gingivita', 'Parodontoza', 'Pulpita', 'Abces dentar'], medici: ['Dr. Neagu Ioana', 'Dr. Balan Cristian'] },
-  'Dermatologie': { boli: ['Eczema', 'Acnee', 'Psoriazis', 'Dermatita atopica', 'Melanom'], medici: ['Dr. Stefan Mihaela', 'Dr. Tudor Adrian'] },
+  // ── ETAJ 1 ──
+  'Cardiologie':       { boli: ['Hipertensiune', 'Aritmie', 'Angina pectorala', 'Infarct', 'Insuficienta cardiaca'], medici: ['Dr.Popescu', 'Dr.Ionescu', 'Dr.Dumitru', 'Dr.Avram', 'Dr.Vasilescu', 'Dr.Georgescu'] },
+  'Neurologie':        { boli: ['Epilepsie', 'Parkinson', 'Alzheimer', 'Migrena cronica', 'AVC'], medici: ['Dr.Diaconu', 'Dr.Stefan', 'Dr.Vlad', 'Dr.Manea', 'Dr.Miron', 'Dr.Sandu'] },
+  // ── ETAJ 2 ──
+  'Urologie':          { boli: ['Cistita', 'Prostatita', 'Litiaza renala', 'Infectie urinara', 'Cancer vezica'], medici: ['Dr.Sava', 'Dr.Pavel', 'Dr.Badea', 'Dr.Luca', 'Dr.Nistor', 'Dr.Balan'] },
+  'Stomatologie':      { boli: ['Carie dentara', 'Gingivita', 'Parodontoza', 'Pulpita', 'Abces dentar', 'Proteza dentara'], medici: ['Dr.Costea', 'Dr.Barbu', 'Dr.Dima', 'Dr.Oprea', 'Dr.Enache', 'Dr.Marin'] },
+  // ── ETAJ 3 ──
+  'Dermatologie':      { boli: ['Eczema', 'Acnee', 'Psoriazis', 'Dermatita atopica', 'Melanom', 'Vitiligo'], medici: ['Dr.Radu', 'Dr.Cristea', 'Dr.Lazar', 'Dr.Toma', 'Dr.Stanescu', 'Dr.Voicu'] },
+  'Ortopedie':         { boli: ['Fractura', 'Artrita', 'Osteoporoza', 'Hernie de disc', 'Luxatie', 'Tendinita'], medici: ['Dr.Gheorghe', 'Dr.Munteanu', 'Dr.Florea', 'Dr.Rusu', 'Dr.Ilie', 'Dr.Serban'] },
+  // ── ETAJ 4 ──
+  'Oftalmologie':      { boli: ['Miopie / Hipermetropie', 'Cataracta', 'Glaucom', 'Dezlipire retina', 'Conjunctivita', 'Strabism'], medici: ['Dr.Andrei', 'Dr.Matei', 'Dr.Dobre', 'Dr.Suciu', 'Dr.Neagu', 'Dr.Bucur'] },
+  'ORL':               { boli: ['Sinuzita', 'Otita medie', 'Amigdalita', 'Polip nazal', 'Laringita', 'Surditate'], medici: ['Dr.Gavrila', 'Dr.Lungu', 'Dr.Ciobanu', 'Dr.Constantinescu', 'Dr.Petrescu', 'Dr.Draghici'] },
+  // ── ETAJ 5 ──
+  'Gastroenterologie': { boli: ['Gastrita', 'Ulcer gastric', 'Colita ulcerativa', 'Ciroza hepatica', 'Reflux gastroesofagian', 'Sindrom colon iritabil'], medici: ['Dr.Stoica', 'Dr.Marinescu', 'Dr.Puscasu', 'Dr.Faur', 'Dr.Botezatu', 'Dr.Coman'] },
+  'Oncologie':         { boli: ['Cancer pulmonar', 'Cancer mamar', 'Cancer de colon', 'Leucemie', 'Limfom', 'Melanom malign'], medici: ['Dr.Zamfir', 'Dr.Grosu', 'Dr.Olaru', 'Dr.Tudor', 'Dr.Nitu', 'Dr.Ene'] },
 };
 
 const CAMERE = {
-  'Cardiologie': {start:1, end:50, etaj:1},
-  'Neurologie':  {start:51, end:100, etaj:1},
-  'Urologie':    {start:101, end:150, etaj:2},
-  'Stomatologie':{start:151, end:200, etaj:2},
-  'Dermatologie':{start:201, end:250, etaj:3},
+  'Cardiologie':       {start:1,   end:50,  etaj:1},
+  'Neurologie':        {start:51,  end:100, etaj:1},
+  'Urologie':          {start:101, end:150, etaj:2},
+  'Stomatologie':      {start:151, end:200, etaj:2},
+  'Dermatologie':      {start:201, end:250, etaj:3},
+  'Ortopedie':         {start:251, end:300, etaj:3},
+  'Oftalmologie':      {start:301, end:350, etaj:4},
+  'ORL':               {start:351, end:400, etaj:4},
+  'Gastroenterologie': {start:401, end:450, etaj:5},
+  'Oncologie':         {start:451, end:500, etaj:5},
 };
 
 let progData = {
@@ -1525,15 +1648,44 @@ const CONS_QS = [
   {id:'c13', grp:'Dermatologie',    text:'Aveți erupții cutanate sau mâncărimi persistente?', spec:'Dermatologie', pts:3},
   {id:'c14', grp:'Dermatologie',    text:'Aveți alunițe sau formațiuni noi pe piele?', spec:'Dermatologie', pts:2},
   {id:'c15', grp:'Dermatologie',    text:'Aveți răni care nu se vindecă sau psoriazis?', spec:'Dermatologie', pts:2},
-  {id:'c16', grp:'Stare generală',  text:'Ați slăbit rapid și neintențional în ultimele luni?', spec:'General', pts:3},
-  {id:'c17', grp:'Stare generală',  text:'Aveți oboseală extremă sau lipsă de energie accentuată?', spec:'General', pts:2},
-  {id:'c18', grp:'Stare generală',  text:'Aveți febră care persistă mai mult de 3 zile?', spec:'General', pts:3},
+  {id:'c16', grp:'Stare generală',      text:'Ați slăbit rapid și neintențional în ultimele luni?', spec:'Oncologie', pts:3},
+  {id:'c17', grp:'Stare generală',      text:'Aveți oboseală extremă sau lipsă de energie accentuată?', spec:'General', pts:2},
+  {id:'c18', grp:'Stare generală',      text:'Aveți febră care persistă mai mult de 3 zile?', spec:'General', pts:3},
+  // Ortopedie
+  {id:'c19', grp:'Ortopedie',           text:'Aveți dureri la oase, articulații sau mușchi?', spec:'Ortopedie', pts:3},
+  {id:'c20', grp:'Ortopedie',           text:'Aveți dificultăți la mers sau limitări de mișcare?', spec:'Ortopedie', pts:2},
+  // Oftalmologie
+  {id:'c21', grp:'Oftalmologie',        text:'Aveți vedere încetoșată, dureri oculare sau flash-uri vizuale?', spec:'Oftalmologie', pts:3},
+  {id:'c22', grp:'Oftalmologie',        text:'Aveți senzație de corp străin în ochi sau roșeață persistentă?', spec:'Oftalmologie', pts:2},
+  // ORL
+  {id:'c23', grp:'ORL',                 text:'Aveți dureri de gât severe, dificultăți la înghițit sau urechi înfundate?', spec:'ORL', pts:3},
+  {id:'c24', grp:'ORL',                 text:'Aveți nas înfundat persistent, pierdere parțială a auzului sau amețeli?', spec:'ORL', pts:2},
+  // Gastroenterologie
+  {id:'c25', grp:'Gastroenterologie',   text:'Aveți dureri abdominale recurente, greață sau balonare severă?', spec:'Gastroenterologie', pts:3},
+  {id:'c26', grp:'Gastroenterologie',   text:'Aveți sânge în scaun, diaree cronică sau constipație severă?', spec:'Gastroenterologie', pts:4},
+  // Oncologie
+  {id:'c27', grp:'Oncologie / Risc',    text:'Aveți formațiuni, noduli sau umflături neobișnuite pe corp?', spec:'Oncologie', pts:4},
+  {id:'c28', grp:'Oncologie / Risc',    text:'Aveți antecedente familiale de cancer sau simptome alarmante persistente?', spec:'Oncologie', pts:3},
 ];
 
-// Programari stocate (in-memory)
-let programari = JSON.parse(localStorage.getItem('programari') || '[]');
-let internati   = JSON.parse(localStorage.getItem('internati')   || '[]');
-let facturi     = JSON.parse(localStorage.getItem('facturi')     || '[]');
+// Date incarcate din backend (C++)
+let programari = [];
+let internati  = [];
+let facturi    = [];
+
+async function loadDataFromBackend() {
+  try {
+    const res = await fetch('/api/data');
+    const data = await res.json();
+    programari = data.programari || [];
+    internati  = data.internati  || [];
+    facturi    = data.facturi    || [];
+    updateCounters();
+  } catch (err) {
+    console.error('Eroare conexiune backend:', err);
+  }
+}
+window.addEventListener('DOMContentLoaded', loadDataFromBackend);
 
 // ═══════════════════════════════════════════════════
 //  PAGE NAVIGATION
@@ -1541,6 +1693,11 @@ let facturi     = JSON.parse(localStorage.getItem('facturi')     || '[]');
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
+  
+  document.querySelectorAll('.header-nav a').forEach(a => a.classList.remove('active'));
+  const navLink = document.querySelector(`.header-nav a[onclick="showPage('${id}')"]`);
+  if (navLink) navLink.classList.add('active');
+  
   window.scrollTo(0,0);
 }
 
@@ -1631,9 +1788,7 @@ function alocaCamera(spec) {
   return {camera: 999, etaj: 3};
 }
 function saveAll() {
-  localStorage.setItem('programari', JSON.stringify(programari));
-  localStorage.setItem('internati',  JSON.stringify(internati));
-  localStorage.setItem('facturi',    JSON.stringify(facturi));
+  // Functia veche pentru localStorage a fost inlocuita cu POST-uri catre backend
 }
 function updateCounters() {
   const r = internati.filter(i=>i.urgenta==='ROSU').length;
@@ -1642,6 +1797,56 @@ function updateCounters() {
   document.getElementById('cnt-red').textContent    = r;
   document.getElementById('cnt-orange').textContent = o;
   document.getElementById('cnt-green').textContent  = g;
+  renderInteractiveMap('hero-map-container');
+  renderInteractiveMap('admin-map-container');
+}
+
+function renderInteractiveMap(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const etaje = [
+    { etaj: 5, sectii: ['Gastroenterologie', 'Oncologie'] },
+    { etaj: 4, sectii: ['Oftalmologie', 'ORL'] },
+    { etaj: 3, sectii: ['Dermatologie', 'Ortopedie'] },
+    { etaj: 2, sectii: ['Urologie', 'Stomatologie'] },
+    { etaj: 1, sectii: ['Cardiologie', 'Neurologie'] },
+  ];
+  let html = '<div style="display:flex;flex-direction:column;gap:8px;font-family:var(--font-body)">';
+  etaje.forEach(e => {
+    let sectiiHtml = '';
+    e.sectii.forEach(s => {
+      const info = SECTII[s];
+      const camStart = CAMERE[s].start;
+      const camEnd = CAMERE[s].end;
+      const pacienti = internati.filter(i => i.medicSpec === s);
+      const camereOcupate = pacienti.map(i => i.camera);
+      sectiiHtml += `
+        <div style="margin-top:8px;padding:10px;background:var(--ice);border-radius:8px;border:1px solid var(--border)">
+          <div style="font-weight:600;font-size:0.85rem;color:var(--navy);margin-bottom:4px">${s} <span style="font-size:0.75rem;color:var(--muted);font-weight:400">(Camere: ${camStart}-${camEnd})</span></div>
+          <div style="font-size:0.75rem;color:var(--text);margin-bottom:6px"><strong>Medici:</strong> ${info.medici.join(', ')}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${camereOcupate.length > 0 
+               ? camereOcupate.map(c => `<span style="background:var(--red-l);color:white;padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:600" title="Cameră ocupată">C${c}</span>`).join('')
+               : `<span style="font-size:0.75rem;color:var(--green)">Toate camerele libere</span>`
+            }
+          </div>
+        </div>
+      `;
+    });
+    html += `
+      <div class="map-etaj" style="border:1.5px solid var(--border);border-radius:12px;background:white;overflow:hidden">
+        <div style="padding:12px 16px;background:rgba(13,27,42,0.03);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:0.9rem;color:var(--navy)" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+          Etajul ${e.etaj}
+          <span style="font-size:0.75rem;color:var(--muted);font-weight:400">Click pentru detalii ▼</span>
+        </div>
+        <div style="padding:12px 16px;display:none;border-top:1px solid var(--border)">
+          ${sectiiHtml}
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1686,9 +1891,16 @@ function proceseazaAmbulanta() {
     rezultatClass = 'info';
   }
 
-  internati.push({numeP:nume, prenumeP:prenume, telefonP:'-', boala, urgenta:'ROSU', medicNume:'Dr. de Gardă', medicSpec:spec, camera:camInfo.camera, etaj:camInfo.etaj, cod});
-  if (email) facturi.push({numeP:nume, prenumeP:prenume, emailP:email, codFactura:codFact, serviciu:'Intervenție chirurgicală urgență (Ambulanță)', suma:cost, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
-  saveAll(); updateCounters();
+  const payload = {
+    numeP:nume, prenumeP:prenume, telefonP:'-', boala, urgenta:'ROSU',
+    medicNume:'Dr. de Gardă', medicSpec:spec, camera:camInfo.camera, etaj:camInfo.etaj, cod
+  };
+  if (email) {
+    payload.factura = { codFactura:codFact, suma:cost };
+  }
+
+  fetch('/api/internare', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
+    .then(() => loadDataFromBackend());
 
   closeModal('modal-ambulanta');
 
@@ -1800,12 +2012,18 @@ function calculeazaTriaj() {
   if (urgText !== 'VERDE') {
     const camInfo = alocaCamera(zona.includes('inima')||zona.includes('piept') ? 'Cardiologie' : 'Neurologie');
     const cod = genCod();
-    internati.push({numeP:n, prenumeP:p, telefonP:'-', boala:'Urgență triaj', urgenta:urgText, medicNume:'Dr. de Gardă', medicSpec:'General', camera:camInfo.camera, etaj:camInfo.etaj, cod});
+    const payload = {
+      numeP:n, prenumeP:p, telefonP:'-', boala:'Urgență triaj', urgenta:urgText, 
+      medicNume:'Dr. de Gardă', medicSpec:'General', camera:camInfo.camera, etaj:camInfo.etaj, cod
+    };
 
     const codFact = genFactCod();
     const sumaFact = urgText === 'ROSU' ? 3200 : 1200;
-    if (e) facturi.push({numeP:n, prenumeP:p, emailP:e, codFactura:codFact, serviciu:'Internare urgență ' + urgText.toLowerCase(), suma:sumaFact, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
-    saveAll(); updateCounters();
+    if (e) {
+      payload.factura = { codFactura:codFact, suma:sumaFact };
+    }
+    fetch('/api/internare', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
+      .then(() => loadDataFromBackend());
   }
 }
 
@@ -1877,13 +2095,22 @@ function calculeazaConsultatie() {
   const necesitaInternare = ptsInternare >= 6;
   const codFact = genFactCod();
   const suma = necesitaInternare ? 1200 : 150;
-  facturi.push({numeP:n, prenumeP:p, emailP:e, codFactura:codFact, serviciu: necesitaInternare ? 'Internare ' + specFinal : 'Consultație ambulatorie ' + specFinal, suma, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
+  const factObj = {numeP:n, prenumeP:p, emailP:e, codFactura:codFact, serviciu: necesitaInternare ? 'Internare ' + specFinal : 'Consultație ambulatorie ' + specFinal, suma, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'};
 
   if (necesitaInternare) {
     const camInfo = alocaCamera(specFinal);
     const cod = genCod();
-    internati.push({numeP:n, prenumeP:p, telefonP:'-', boala:'Consultație → internare', urgenta:'PORTOCALIU', medicNume:'Dr. de Gardă', medicSpec:specFinal, camera:camInfo.camera, etaj:camInfo.etaj, cod});
-    saveAll(); updateCounters();
+    const payload = {
+      numeP:n, prenumeP:p, telefonP:'-', boala:'Consultație → internare', urgenta:'PORTOCALIU',
+      medicNume:'Dr. de Gardă', medicSpec:specFinal, camera:camInfo.camera, etaj:camInfo.etaj, cod,
+      factura: { codFactura:codFact, suma:suma }
+    };
+    fetch('/api/internare', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
+      .then(() => loadDataFromBackend());
+
+    // Email real
+    trimiteEmailFacturaInternare(e, n + ' ' + p, factObj);
+
     closeModal('modal-consultatie');
     launchConfetti();
     showPopup({
@@ -1894,7 +2121,10 @@ function calculeazaConsultatie() {
       btnText:'OK'
     });
   } else {
-    saveAll();
+    fetch('/api/factura', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(factObj) })
+      .then(() => loadDataFromBackend());
+    // Email real
+    trimiteEmailFacturaInternare(e, n + ' ' + p, factObj);
     closeModal('modal-consultatie');
     showPopup({
       icon:'🟢', iconClass:'success',
@@ -1920,18 +2150,41 @@ function updateBoli() {
   bs.innerHTML = SECTII[s].boli.map(b => `<option>${b}</option>`).join('');
   ms.innerHTML = SECTII[s].medici.map(m => `<option>${m}</option>`).join('');
 
-  // Fill ore
+  // Initialize hours to empty, waiting for date input
   const oreC = document.getElementById('prog-ore-container');
+  oreC.innerHTML = '<span style="font-size:0.85rem;color:var(--muted)">Introduceți o zi validă pentru a vedea orele disponibile.</span>';
+  updateOre();
+}
+
+function updateOre() {
+  const zi = parseInt(document.getElementById('prog-zi').value);
+  const luna = parseInt(document.getElementById('prog-luna').value);
+  const medicEl = document.getElementById('prog-medic');
+  const medic = medicEl ? medicEl.value : '';
+
+  const oreC = document.getElementById('prog-ore-container');
+  if (!oreC) return;
   const ore  = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00'];
-  oreC.innerHTML = ore.map(o => `
-    <button type="button" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--border);background:white;font-family:var(--font-body);font-size:0.85rem;cursor:pointer;transition:all .2s;font-weight:500"
-      onclick="selectOra(this,'${o}')">${o}</button>
-  `).join('');
+  
+  if (!zi || zi < 1 || zi > 31 || !medic) {
+    oreC.innerHTML = '<span style="font-size:0.85rem;color:var(--muted)">Introduceți o zi validă pentru a vedea orele disponibile.</span>';
+    return;
+  }
+
+  const booked = programari.filter(p => p.medic === medic && parseInt(p.zi) === zi && parseInt(p.luna) === luna).map(p => p.ora);
+
+  oreC.innerHTML = ore.map(o => {
+    if (booked.includes(o)) {
+       return `<button type="button" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--red-l);background:rgba(192,57,43,0.08);color:var(--red);font-family:var(--font-body);font-size:0.85rem;cursor:not-allowed;font-weight:500;text-decoration:line-through" disabled>${o}</button>`;
+    }
+    return `<button type="button" class="btn-ora-disponibila" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--border);background:white;font-family:var(--font-body);font-size:0.85rem;cursor:pointer;transition:all .2s;font-weight:500" onclick="selectOra(this,'${o}')">${o}</button>`;
+  }).join('');
+  selectedOra = ''; // reset selection
 }
 
 let selectedOra = '';
 function selectOra(btn, ora) {
-  document.querySelectorAll('#prog-ore-container button').forEach(b => {
+  document.querySelectorAll('.btn-ora-disponibila').forEach(b => {
     b.style.background = 'white';
     b.style.borderColor = 'var(--border)';
     b.style.color = 'var(--text)';
@@ -1985,30 +2238,38 @@ function progNext(step) {
     const sc = document.getElementById('prog-step-'+i);
     sc.className = 'step' + (i < step ? ' done' : i === step ? ' active' : '');
   });
+  if (step === 2) updateOre();
 }
 
-function confirmaPrograname() {
+async function confirmaProgramare() {
   const cod = genCod();
   progData.cod = cod;
 
-  programari.push({...progData});
-
   const codFact = genFactCod();
-  facturi.push({numeP:progData.nume, prenumeP:progData.prenume, emailP:progData.email, codFactura:codFact, serviciu:'Consultație planificată ' + progData.sectie, suma:238, achitata:false, data:'06.05.2026', scadenta:'06.06.2026'});
-  saveAll(); updateCounters();
+  await fetch('/api/programare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({...progData, codFactura: codFact})
+  });
+  await loadDataFromBackend();
+
+  // Trimite email real
+  const emailSent = await trimiteEmailProgramare(progData, codFact);
 
   closeModal('modal-programare');
   launchConfetti();
   showPopup({
     icon:'🎉', iconClass:'success',
     title:'Programare confirmată!',
-    desc:'Programarea a fost înregistrată cu succes. Veți primi confirmarea pe email.',
+    desc: emailSent
+      ? 'Programarea a fost înregistrată cu succes. Confirmarea a fost trimisă pe Gmail!'
+      : 'Programarea a fost înregistrată. (Verificați configurarea EmailJS pentru livrarea emailului)',
     details:`
       <strong>Medic:</strong> ${progData.medic}<br>
       <strong>Data:</strong> ${progData.zi}.${progData.luna}.2026 | Ora: ${progData.ora}<br>
       <strong>Boală:</strong> ${progData.boala}<br>
       <strong>Cod anulare:</strong> <code style="background:var(--ice);padding:2px 6px;border-radius:4px;font-size:0.9em">${cod}</code><br>
-      <strong>Factură trimisă pe:</strong> ${progData.email}<br>
+      <strong>${emailSent ? '📧 Email trimis la:' : '📧 Email (configurare necesară):'}</strong> ${progData.email}<br>
       <strong>Cod factură:</strong> ${codFact} | <strong>Sumă:</strong> 238.00 RON
     `,
     btnText:'Excelent!'
@@ -2027,23 +2288,28 @@ function anuleazaProgramare() {
   const p   = document.getElementById('anul-prenume').value.trim();
   const cod = document.getElementById('anul-cod').value.trim();
 
-  const idx = programari.findIndex(x => x.nume===n && x.prenume===p && x.cod===cod);
-  if (idx === -1) {
-    showPopup({icon:'❌', iconClass:'error', title:'Nu s-a găsit', desc:'Nu există nicio programare cu datele introduse. Verificați codul de anulare.'});
-    return;
-  }
-  const pr = programari[idx];
-  programari.splice(idx, 1);
-  saveAll(); updateCounters();
-  closeModal('modal-anulare');
-  showPopup({
-    icon:'✅', iconClass:'success',
-    title:'Programare anulată',
-    desc:'Programarea a fost anulată cu succes.',
-    details:`<strong>Pacient:</strong> ${n} ${p}<br><strong>Medic:</strong> ${pr.medic}<br><strong>Data:</strong> ${pr.zi}.${pr.luna}.2026 | Ora: ${pr.ora}`,
-    btnText:'OK'
+  fetch('/api/anulare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({nume: n, prenume: p, cod: cod})
+  }).then(res => {
+    if (!res.ok) {
+      showPopup({icon:'❌', iconClass:'error', title:'Nu s-a găsit', desc:'Nu există nicio programare cu datele introduse. Verificați codul de anulare.'});
+      return;
+    }
+    loadDataFromBackend().then(() => {
+      closeModal('modal-anulare');
+      showPopup({
+        icon:'✅', iconClass:'success',
+        title:'Programare anulată',
+        desc:'Programarea a fost anulată cu succes.',
+        details:`<strong>Pacient:</strong> ${n} ${p}<br><strong>Data anulată cu succes!</strong>`,
+        btnText:'OK'
+      });
+    });
   });
 }
+
 
 // ═══════════════════════════════════════════════════
 //  ADMIN
@@ -2057,7 +2323,7 @@ function loginAdmin() {
   document.getElementById('admin-err').classList.remove('show');
   document.getElementById('admin-login-wrap').style.display = 'none';
   document.getElementById('admin-panel-wrap').style.display = 'block';
-  showAdminTab('programari');
+  showAdminTab('programari', null);
 }
 function logoutAdmin() {
   document.getElementById('admin-login-wrap').style.display = 'block';
@@ -2065,9 +2331,9 @@ function logoutAdmin() {
   document.getElementById('admin-pass').value = '';
 }
 
-function showAdminTab(tab) {
+function showAdminTab(tab, e) {
   document.querySelectorAll('.admin-menu-item').forEach(el => el.classList.remove('active'));
-  event && event.target.classList.add('active');
+  if (e && e.target) e.target.closest('.admin-menu-item') && e.target.closest('.admin-menu-item').classList.add('active');
   const cont = document.getElementById('admin-content');
 
   if (tab === 'programari') {
@@ -2098,12 +2364,12 @@ function showAdminTab(tab) {
   } else if (tab === 'facturi') {
     cont.innerHTML = `<div class="admin-content-title">💰 Facturi</div>
       <div style="margin-bottom:16px"><a href="plata.html" target="_blank" class="btn btn-green btn-sm">🔗 Deschide Pagina de Plată</a></div>
-      <div class="table-wrap"><table><thead><tr><th>Pacient</th><th>Serviciu</th><th>Sumă</th><th>Scadență</th><th>Status</th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th>Pacient</th><th>Cod Factură</th><th>Sumă</th><th>Scadență</th><th>Status</th></tr></thead>
       <tbody>${facturi.length ? facturi.map(f=>`<tr>
         <td>${f.numeP} ${f.prenumeP}</td>
-        <td style="max-width:200px;font-size:.85em">${f.serviciu}</td>
-        <td><strong>${f.suma.toFixed(2)} RON</strong></td>
-        <td>${f.scadenta||'06.06.2026'}</td>
+        <td><code style="font-size:.8em;background:var(--ice);padding:2px 6px;border-radius:4px">${f.codFactura}</code></td>
+        <td><strong>${Number(f.suma).toFixed(2)} RON</strong></td>
+        <td>06.06.2026</td>
         <td><span class="badge badge-${f.achitata?'green':'red'}">${f.achitata?'✅ Achitată':'⏳ Neachitată'}</span></td>
       </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px">Nu există facturi înregistrate</td></tr>'}
       </tbody></table></div>`;
@@ -2114,47 +2380,78 @@ function showAdminTab(tab) {
         <div class="form-group"><label class="form-label">Gmail medic</label><input type="email" class="form-input" id="adm-m-email" placeholder="doctor@gmail.com"></div>
         <div class="form-group"><label class="form-label">Specializare</label>
           <select class="form-select" id="adm-m-spec">
-            <option>Cardiologie</option><option>Neurologie</option><option>Urologie</option><option>Stomatologie</option><option>Dermatologie</option>
+            <option>Cardiologie</option>
+            <option>Neurologie</option>
+            <option>Urologie</option>
+            <option>Stomatologie</option>
+            <option>Dermatologie</option>
+            <option>Ortopedie</option>
+            <option>Oftalmologie</option>
+            <option>ORL</option>
+            <option>Gastroenterologie</option>
+            <option>Oncologie</option>
           </select></div>
         <div class="form-group"><label class="form-label">Parolă</label><input type="password" class="form-input" id="adm-m-pass" placeholder="Parolă sigură..."></div>
         <button class="btn btn-navy" onclick="addMedic()">➕ Adaugă Medic</button>
       </div>`;
   } else if (tab === 'harta') {
     cont.innerHTML = `<div class="admin-content-title">🗺️ Harta Spitalului</div>
-      <div style="font-family:monospace;font-size:0.9rem;line-height:2;background:var(--ice);border-radius:12px;padding:28px;border:1px solid var(--border)">
-<pre style="font-family:inherit">  +----------------------------------------------------------+
-  |           SPITAL CENTRAL - HARTA ETAJE                   |
-  +----------------------------------------------------------+
-  |  ETAJ 3  | Dermatologie (201-250) | Rezerva  (251-300)   |
-  +----------------------------------------------------------+
-  |  ETAJ 2  | Urologie     (101-150) | Stomato  (151-200)   |
-  +----------------------------------------------------------+
-  |  ETAJ 1  | Cardiologie  (  1- 50) | Neurolog ( 51-100)   |
-  +----------------------------------------------------------+
-  |  PARTER  | RECEPTIE  | URGENTE  | FARMACIA | LABORATOR   |
-  +----------------------------------------------------------+
-  |  SUBSOL  | SALA OPERATII 1 | SALA OPERATII 2 | MORGA    |
-  +----------------------------------------------------------+</pre>
-      </div>
-      <div class="cards-grid" style="margin-top:24px">
-        ${[['Cardiologie','❤️','Etaj 1, camere 1-50'],['Neurologie','🧠','Etaj 1, camere 51-100'],['Urologie','💧','Etaj 2, camere 101-150'],['Stomatologie','🦷','Etaj 2, camere 151-200'],['Dermatologie','🔬','Etaj 3, camere 201-250'],['Rezervă','🛏️','Etaj 3, camere 251-300']].map(([s,ic,loc])=>`
+      <div id="admin-map-container" style="max-width:800px;margin-bottom:24px;"></div>`;
+    renderInteractiveMap('admin-map-container');
+    cont.innerHTML += `<div class="cards-grid" style="margin-top:24px">
+        ${[
+          ['Cardiologie','❤️','Etaj 1, camere 1–50','EKG, Defibrilator, Monitor cardiac'],
+          ['Neurologie','🧠','Etaj 1, camere 51–100','RMN, EEG, Tomograf'],
+          ['Urologie','💧','Etaj 2, camere 101–150','Ecograf, Cistoscop, Masă operatorie'],
+          ['Stomatologie','🦷','Etaj 2, camere 151–200','Fotoliu stomatologic, Rx dentar, Turbină'],
+          ['Dermatologie','🔬','Etaj 3, camere 201–250','Dermatoscop, Laser, Fototerapie UV'],
+          ['Ortopedie','🦴','Etaj 3, camere 251–300','Rx ortopedic, Ghips, Masă ortopedică'],
+          ['Oftalmologie','👁️','Etaj 4, camere 301–350','Optometru, Laser retinian, Biomicroscop'],
+          ['ORL','👂','Etaj 4, camere 351–400','Audiometru, Endoscop nazal, Otoscop'],
+          ['Gastroenterologie','🫁','Etaj 5, camere 401–450','Endoscop, Colonoscop, Ecograf abdominal'],
+          ['Oncologie','🎗️','Etaj 5, camere 451–500','Chimioterapie, Radioterapie, PET-CT'],
+          ['Sal. Operații','🏥','Subsol – Saale 1 & 2','Instrumentar chirurgical complet, ATI'],
+          ['Rezervă ATI','🛏️','Subsol','Monitorizare continuă post-operator'],
+        ].map(([s,ic,loc,ech])=>`
         <div class="card" style="padding:20px">
           <div style="font-size:1.5rem;margin-bottom:8px">${ic}</div>
-          <div class="card-title" style="font-size:1rem">${s}</div>
-          <div class="card-desc" style="font-size:.82rem;margin-bottom:0">${loc}</div>
+          <div class="card-title" style="font-size:.95rem">${s}</div>
+          <div class="card-desc" style="font-size:.8rem;margin-bottom:4px;color:var(--muted)">${loc}</div>
+          <div style="font-size:.75rem;color:var(--muted);font-weight:300">${ech}</div>
         </div>`).join('')}
       </div>`;
   }
 }
 
-function addMedic() {
+async function addMedic() {
   const n = document.getElementById('adm-m-nume').value.trim();
   const e = document.getElementById('adm-m-email').value.trim();
-  if (!n || !e.includes('@gmail.com')) {
+  const s = document.getElementById('adm-m-spec').value;
+  const p = document.getElementById('adm-m-pass').value.trim();
+
+  if (!n || !e.includes('@gmail.com') || !s || !p) {
     showPopup({icon:'⚠️',iconClass:'warning',title:'Date incomplete',desc:'Completați toate câmpurile cu o adresă Gmail validă.'});
     return;
   }
-  showPopup({icon:'✅',iconClass:'success',title:'Medic adăugat!',desc:`Dr. ${n} a fost înregistrat cu succes în sistem.`});
+
+  try {
+    const res = await fetch('/api/doctor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nume: n, email: e, spec: s, parola: p })
+    });
+    if (res.ok) {
+      showPopup({icon:'✅',iconClass:'success',title:'Medic adăugat!',desc:`Dr. ${n} a fost înregistrat cu succes în sistem.`});
+      // Reset form
+      document.getElementById('adm-m-nume').value = '';
+      document.getElementById('adm-m-email').value = '';
+      document.getElementById('adm-m-pass').value = '';
+    } else {
+      throw new Error('Eroare server');
+    }
+  } catch (err) {
+    showPopup({icon:'❌',iconClass:'error',title:'Eroare',desc:'Nu s-a putut adăuga medicul. Verificați conexiunea cu backend-ul.'});
+  }
 }
 
 // ═══════════════════════════════════════════════════

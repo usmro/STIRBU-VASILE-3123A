@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plată Factură – Spital Central</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<style>
+  :root {
+    --red:     #C0392B;
+    --red-l:   #E74C3C;
+    --orange:  #E67E22;
+    --green:   #27AE60;
+    --navy:    #0D1B2A;
+    --navy-2:  #152536;
+    --ice:     #EAF4FF;
+    --ice-2:   #D4E9FA;
+    --white:   #FFFFFF;
+    --text:    #0D1B2A;
+    --muted:   #5A7A96;
+    --border:  rgba(13,27,42,0.10);
+    --shadow:  0 4px 32px rgba(13,27,42,0.13);
+    --shadow-lg: 0 12px 64px rgba(13,27,42,0.18);
+    --radius:  16px;
+    --radius-sm: 10px;
+    --font-display: 'DM Serif Display', serif;
+    --font-body:    'DM Sans', sans-serif;
+    --transition:   0.28s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html { scroll-behavior:smooth; }
+  body {
+    font-family: var(--font-body);
+    background: var(--ice);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 900px 600px at 80% -10%, rgba(39,174,96,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 700px 500px at -5% 80%, rgba(13,27,42,0.07) 0%, transparent 70%),
+      linear-gradient(160deg,#EAF4FF 0%,#D4E9FA 60%,#EAF4FF 100%);
+    z-index:-1; pointer-events:none;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy); color:white;
+    padding:0 48px; height:72px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+    box-shadow: 0 2px 24px rgba(13,27,42,0.28);
+  }
+  .header-brand { display:flex; align-items:center; gap:14px; }
+  .header-cross { width:36px; height:36px; position:relative; flex-shrink:0; }
+  .header-cross::before,.header-cross::after { content:''; position:absolute; background:var(--red-l); border-radius:3px; }
+  .header-cross::before { width:12px; height:36px; left:12px; top:0; }
+  .header-cross::after  { width:36px; height:12px; left:0; top:12px; }
+  .header-title { font-family:var(--font-display); font-size:1.35rem; letter-spacing:.01em; line-height:1.1; }
+  .header-title span { display:block; font-family:var(--font-body); font-size:.72rem; font-weight:300; color:rgba(255,255,255,.55); letter-spacing:.15em; text-transform:uppercase; }
+  .header-nav { display:flex; gap:6px; }
+  .header-nav a { color:rgba(255,255,255,.7); text-decoration:none; font-size:.85rem; font-weight:500; padding:8px 16px; border-radius:8px; transition:all .2s; }
+  .header-nav a:hover { background:rgba(255,255,255,.1); color:white; }
+  .header-nav a.active { background:var(--green); color:white; }
+
+  /* ── LAYOUT ── */
+  .page-wrap {
+    max-width:1100px; margin:0 auto;
+    padding:60px 48px 80px;
+    display:grid; grid-template-columns:1.2fr 1fr; gap:48px; align-items:start;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background:white; border-radius:var(--radius);
+    padding:36px; box-shadow:var(--shadow);
+    border:1px solid var(--border);
+  }
+  .card-title {
+    font-family:var(--font-display); font-size:1.45rem; color:var(--navy);
+    margin-bottom:6px; display:flex; align-items:center; gap:10px;
+  }
+  .card-subtitle { font-size:.88rem; color:var(--muted); font-weight:300; margin-bottom:28px; }
+
+  /* ── FORMS ── */
+  .form-group { margin-bottom:18px; }
+  .form-label { display:block; font-size:.78rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .form-input, .form-select {
+    width:100%; padding:13px 16px;
+    border:1.5px solid var(--border); border-radius:var(--radius-sm);
+    font-family:var(--font-body); font-size:.95rem; color:var(--text);
+    background:var(--ice); transition:all .2s; outline:none; appearance:none;
+  }
+  .form-input:focus,.form-select:focus { border-color:var(--navy); background:white; box-shadow:0 0 0 3px rgba(13,27,42,.08); }
+  .form-input.error { border-color:var(--red-l); background:rgba(231,76,60,.04); }
+  .form-error { font-size:.78rem; color:var(--red); margin-top:5px; display:none; }
+  .form-error.show { display:block; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+  /* ── CARD INPUT GROUP (card number) ── */
+  .card-input-wrap { position:relative; }
+  .card-input-wrap .card-brand {
+    position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    font-size:1.3rem; pointer-events:none; display:none;
+  }
+  .card-input-wrap .card-brand.show { display:block; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:14px 28px; border-radius:var(--radius-sm);
+    font-family:var(--font-body); font-size:.95rem; font-weight:600;
+    cursor:pointer; border:none; text-decoration:none;
+    transition:var(--transition); letter-spacing:.01em;
+    position:relative; overflow:hidden;
+  }
+  .btn::after { content:''; position:absolute; inset:0; background:white; opacity:0; transition:opacity .2s; }
+  .btn:hover::after { opacity:.08; }
+  .btn:active { transform:scale(.97); }
+  .btn-primary { background:var(--navy); color:white; box-shadow:0 4px 18px rgba(13,27,42,.25); }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(13,27,42,.35); }
+  .btn-green { background:var(--green); color:white; box-shadow:0 4px 18px rgba(39,174,96,.3); }
+  .btn-green:hover { transform:translateY(-2px); }
+  .btn-outline { background:transparent; color:var(--navy); border:2px solid var(--border); }
+  .btn-outline:hover { border-color:var(--navy); background:rgba(13,27,42,.04); }
+  .btn-full { width:100%; justify-content:center; }
+
+  /* ── FACTURA PREVIEW ── */
+  .invoice-preview {
+    background:white; border-radius:var(--radius);
+    box-shadow:var(--shadow-lg); overflow:hidden;
+    border:1px solid var(--border);
+    position:sticky; top:96px;
+  }
+  .inv-header {
+    background:var(--navy); color:white; padding:24px 28px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .inv-logo { width:42px; height:42px; position:relative; flex-shrink:0; }
+  .inv-logo::before,.inv-logo::after { content:''; position:absolute; background:var(--red-l); border-radius:2px; }
+  .inv-logo::before { width:10px; height:30px; left:16px; top:6px; }
+  .inv-logo::after  { width:30px; height:10px; left:6px; top:16px; }
+  .inv-hosp-name { font-family:var(--font-display); font-size:1.1rem; }
+  .inv-hosp-sub  { font-size:.72rem; color:rgba(255,255,255,.5); letter-spacing:.1em; text-transform:uppercase; margin-top:2px; }
+  .inv-body { padding:28px; }
+  .inv-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid var(--border);
+    font-size:.9rem;
+  }
+  .inv-row:last-of-type { border-bottom:none; }
+  .inv-row .label { color:var(--muted); font-weight:400; }
+  .inv-row .value { font-weight:600; color:var(--text); text-align:right; max-width:60%; }
+  .inv-total {
+    background:var(--ice); border-radius:12px;
+    padding:16px 20px; margin-top:16px;
+    display:flex; justify-content:space-between; align-items:center;
+    border:1px solid var(--border);
+  }
+  .inv-total .t-label { font-size:.8rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .inv-total .t-value { font-family:var(--font-display); font-size:1.6rem; color:var(--navy); }
+  .inv-status {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 12px; border-radius:100px; font-size:.78rem; font-weight:600;
+  }
+  .inv-status.unpaid  { background:rgba(192,57,43,.1);  color:var(--red); }
+  .inv-status.paid    { background:rgba(39,174,96,.1);   color:var(--green); }
+  .inv-status.loading { background:rgba(13,27,42,.07);   color:var(--muted); }
+  .inv-not-found {
+    padding:48px 28px; text-align:center; color:var(--muted);
+  }
+  .inv-not-found .nf-icon { font-size:2.5rem; margin-bottom:12px; }
+  .inv-not-found p { font-size:.88rem; }
+
+  /* ── METODE ── */
+  .method-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+  .method-item {
+    padding:14px 16px; border-radius:12px;
+    border:1.5px solid var(--border); cursor:pointer;
+    transition:all .22s; background:white;
+    display:flex; align-items:center; gap:10px;
+    font-size:.88rem; font-weight:500;
+  }
+  .method-item:hover { border-color:var(--navy); background:var(--ice); }
+  .method-item.selected { border-color:var(--navy); background:var(--navy); color:white; }
+  .method-item .m-icon { font-size:1.2rem; flex-shrink:0; }
+
+  /* ── STEP SECTIONS ── */
+  .step-section { display:none; }
+  .step-section.active { display:block; animation:fadeUp .35s ease both; }
+
+  /* ── IBAN BOX ── */
+  .iban-box {
+    background:var(--ice); border-radius:12px; padding:20px 24px;
+    border:1px solid var(--border); font-size:.9rem; line-height:2;
+  }
+  .iban-code {
+    font-family:monospace; font-size:1rem; font-weight:600;
+    background:white; padding:8px 14px; border-radius:8px;
+    border:1px solid var(--border); letter-spacing:.05em;
+    display:inline-block; margin:4px 0;
+  }
+  .copy-btn {
+    background:none; border:1.5px solid var(--border); border-radius:6px;
+    padding:4px 10px; font-size:.78rem; font-weight:600; cursor:pointer;
+    color:var(--muted); transition:all .2s; margin-left:8px;
+  }
+  .copy-btn:hover { background:var(--navy); color:white; border-color:var(--navy); }
+
+  /* ── POPUP ── */
+  .popup-overlay {
+    position:fixed; inset:0; background:rgba(13,27,42,.55);
+    backdrop-filter:blur(8px); z-index:2000;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    opacity:0; pointer-events:none; transition:opacity .3s;
+  }
+  .popup-overlay.open { opacity:1; pointer-events:all; }
+  .popup {
+    background:white; border-radius:28px; padding:48px 52px;
+    text-align:center; max-width:480px; width:90%;
+    box-shadow:0 24px 80px rgba(13,27,42,.3);
+    transform:scale(.8) translateY(20px);
+    transition:transform .45s cubic-bezier(.34,1.56,.64,1);
+  }
+  .popup-overlay.open .popup { transform:scale(1) translateY(0); }
+  .popup-icon {
+    width:80px; height:80px; border-radius:50%;
+    margin:0 auto 20px;
+    display:flex; align-items:center; justify-content:center; font-size:2.2rem;
+    position:relative;
+  }
+  .popup-icon::after {
+    content:''; position:absolute; inset:-6px; border-radius:50%;
+    border:2px solid currentColor; opacity:.2;
+    animation:ringPulse 1.5s ease-out .3s both;
+  }
+  @keyframes ringPulse { from{transform:scale(.8);opacity:.4;} to{transform:scale(1.2);opacity:0;} }
+  .popup-icon.success { background:rgba(39,174,96,.12); color:var(--green); }
+  .popup-icon.error   { background:rgba(192,57,43,.12); color:var(--red); }
+  .popup-icon.info    { background:rgba(13,27,42,.08);  color:var(--navy); }
+  .popup h2 { font-family:var(--font-display); font-size:1.7rem; color:var(--navy); margin-bottom:10px; }
+  .popup p  { font-size:.95rem; color:var(--muted); line-height:1.6; font-weight:300; margin-bottom:24px; }
+  .popup-details {
+    background:var(--ice); border-radius:14px; padding:16px 20px;
+    margin-bottom:24px; text-align:left; font-size:.88rem; color:var(--text);
+    line-height:1.9; border:1px solid var(--border);
+  }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width:20px; height:20px; border:3px solid rgba(255,255,255,.3);
+    border-top-color:white; border-radius:50%;
+    animation:spin .7s linear infinite; display:none;
+  }
+  @keyframes spin { to{ transform:rotate(360deg); } }
+
+  /* ── CONFETTI ── */
+  .confetti-piece {
+    position:fixed; border-radius:2px; z-index:3000;
+    animation:confettiFall linear forwards; pointer-events:none;
+  }
+  @keyframes confettiFall {
+    0%   { transform:translateY(-10px) rotate(0deg); opacity:1; }
+    100% { transform:translateY(100vh) rotate(720deg); opacity:0; }
+  }
+
+  /* ── SECURITY BADGES ── */
+  .security-row {
+    display:flex; gap:20px; flex-wrap:wrap;
+    justify-content:center; margin-top:24px;
+    padding-top:20px; border-top:1px solid var(--border);
+  }
+  .sec-badge {
+    display:flex; align-items:center; gap:6px;
+    font-size:.78rem; color:var(--muted); font-weight:500;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+
+  footer {
+    background:var(--navy); color:rgba(255,255,255,.5);
+    text-align:center; padding:24px 48px; font-size:.82rem;
+  }
+  footer strong { color:rgba(255,255,255,.8); }
+
+  @media(max-width:900px) {
+    .page-wrap { grid-template-columns:1fr; padding:32px 24px 60px; gap:32px; }
+    header { padding:0 24px; }
+    .header-nav { display:none; }
+    .invoice-preview { position:static; order:-1; }
+    .form-row { grid-template-columns:1fr; }
+    .method-grid { grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-brand">
+    <div class="header-cross"></div>
+    <div class="header-title">
+      Spital Central
+      <span>Portal Plăți</span>
+    </div>
+  </div>
+  <nav class="header-nav">
+    <a href="index.html">← Înapoi la site</a>
+    <a href="#" class="active">💳 Plată Factură</a>
+  </nav>
+</header>
+
+<!-- ── MAIN ── -->
+<div class="page-wrap">
+
+  <!-- LEFT: FORM -->
+  <div>
+    <!-- STEP 1: cautare factura -->
+    <div class="step-section active" id="s-search">
+      <div class="card">
+        <div class="card-title">🔍 Caută Factura</div>
+        <div class="card-subtitle">Introduceți codul facturii sau datele personale</div>
+
+        <div class="form-group">
+          <label class="form-label">Cod factură</label>
+          <input type="text" class="form-input" id="srch-cod" placeholder="ex: FACT-123456" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:.85rem;margin:8px 0 16px">– sau –</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nume</label>
+            <input type="text" class="form-input" id="srch-nume" placeholder="Popescu">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prenume</label>
+            <input type="text" class="form-input" id="srch-prenume" placeholder="Ion">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="cautaFactura()">
+          🔍 Caută Factură
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: alegere metoda + date plata -->
+    <div class="step-section" id="s-pay">
+      <div class="card">
+        <div class="card-title">💳 Achitare Factură</div>
+        <div class="card-subtitle" id="pay-subtitle">Selectați metoda de plată</div>
+
+        <div class="method-grid">
+          <div class="method-item selected" id="m-card" onclick="selectMethod('card')">
+            <span class="m-icon">💳</span> Card bancar
+          </div>
+          <div class="method-item" id="m-iban" onclick="selectMethod('iban')">
+            <span class="m-icon">🏦</span> Virament bancar
+          </div>
+          <div class="method-item" id="m-cash" onclick="selectMethod('cash')">
+            <span class="m-icon">💵</span> Numerar casierie
+          </div>
+          <div class="method-item" id="m-app" onclick="selectMethod('app')">
+            <span class="m-icon">📱</span> Aplicație mobilă
+          </div>
+        </div>
+
+        <!-- CARD METHOD -->
+        <div id="method-card" class="step-section active">
+          <div class="form-group">
+            <label class="form-label">Număr card</label>
+            <div class="card-input-wrap">
+              <input type="text" class="form-input" id="card-nr" placeholder="0000 0000 0000 0000" maxlength="19" oninput="formatCard(this)" style="padding-right:48px">
+              <span class="card-brand" id="card-brand"></span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Expiră (LL/AA)</label>
+              <input type="text" class="form-input" id="card-exp" placeholder="12/28" maxlength="5" oninput="formatExp(this)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">CVV</label>
+              <input type="text" class="form-input" id="card-cvv" placeholder="•••" maxlength="3" oninput="this.value=this.value.replace(/\D/g,'')">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nume titularcardcard</label>
+            <input type="text" class="form-input" id="card-name" placeholder="POPESCU ION" oninput="this.value=this.value.toUpperCase()">
+          </div>
+        </div>
+
+        <!-- IBAN METHOD -->
+        <div id="method-iban" class="step-section">
+          <div class="iban-box">
+            <strong>Detalii transfer bancar:</strong><br>
+            Beneficiar: <strong>Spital Central S.A.</strong><br>
+            IBAN: <span class="iban-code" id="iban-display">RO49AAAA1B31007593840000</span>
+            <button class="copy-btn" onclick="copyIBAN()">📋 Copiază</button><br>
+            Referință obligatorie: <span class="iban-code" id="ref-display">–</span>
+            <button class="copy-btn" onclick="copyRef()">📋 Copiază</button><br>
+            Sumă exactă: <strong id="iban-suma">–</strong> RON<br><br>
+            <span style="color:var(--muted);font-size:.85rem">⏳ Plata va fi procesată în 1–3 zile lucrătoare după recepția transferului.</span>
+          </div>
+        </div>
+
+        <!-- CASH METHOD -->
+        <div id="method-cash" class="step-section">
+          <div class="iban-box">
+            📍 <strong>Casieria Spital Central</strong><br>
+            Parter, lângă Recepție principală<br>
+            <br>
+            🕐 <strong>Program:</strong><br>
+            Luni – Vineri: 07:00 – 20:00<br>
+            Sâmbătă: 09:00 – 14:00<br>
+            Duminică: <span style="color:var(--red)">Închis</span><br>
+            <br>
+            ℹ️ Prezentați-vă cu codul facturii: <strong id="cash-cod">–</strong>
+          </div>
+        </div>
+
+        <!-- APP METHOD -->
+        <div id="method-app" class="step-section">
+          <div class="iban-box" style="text-align:center">
+            📱 <strong>Aplicația mobilă Spital Central</strong><br><br>
+            Scanați codul QR sau descărcați aplicația:<br><br>
+            <div style="width:100px;height:100px;background:var(--navy);border-radius:12px;margin:12px auto;display:flex;align-items:center;justify-content:center;color:white;font-size:.7rem;font-weight:600">QR CODE</div>
+            Disponibil pe <strong>App Store</strong> și <strong>Google Play</strong><br><br>
+            Cod de plată: <span class="iban-code" id="app-cod">–</span>
+          </div>
+        </div>
+
+        <!-- EMAIL pentru chitanta -->
+        <div class="form-group" style="margin-top:20px">
+          <label class="form-label">Gmail pentru chitanță / confirmare plată</label>
+          <input type="email" class="form-input" id="pay-email" placeholder="adresa@gmail.com">
+          <div class="form-error" id="pay-email-err">Introduceți o adresă Gmail validă (@gmail.com)</div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-outline" onclick="inapoiSearch()" style="flex:1;justify-content:center">← Înapoi</button>
+          <button class="btn btn-green" onclick="platesteFactura()" style="flex:2;justify-content:center" id="btn-plata">
+            <span id="btn-plata-text">✅ Achitează acum</span>
+            <span class="spinner" id="btn-spinner"></span>
+          </button>
+        </div>
+
+        <div class="security-row">
+          <div class="sec-badge">🔒 SSL 256-bit</div>
+          <div class="sec-badge">🛡️ PCI DSS</div>
+          <div class="sec-badge">✅ 3D Secure</div>
+          <div class="sec-badge">🏦 BNR autorizat</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: INVOICE PREVIEW -->
+  <div>
+    <div class="invoice-preview" id="invoice-preview">
+      <div class="inv-header">
+        <div class="inv-logo"></div>
+        <div>
+          <div class="inv-hosp-name">Spital Central</div>
+          <div class="inv-hosp-sub">Factură fiscală</div>
+        </div>
+      </div>
+      <div class="inv-body" id="inv-body">
+        <div class="inv-not-found">
+          <div class="nf-icon">🧾</div>
+          <p>Introduceți codul facturii sau datele pacientului pentru a vizualiza factura.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTA FACTURI (daca exista mai multe) -->
+    <div id="multi-invoices" style="display:none;margin-top:20px"></div>
+  </div>
+
+</div>
+
+<!-- ── POPUP ── -->
+<div class="popup-overlay" id="global-popup">
+  <div class="popup">
+    <div class="popup-icon" id="popup-icon">✅</div>
+    <h2 id="popup-title"></h2>
+    <p id="popup-desc"></p>
+    <div class="popup-details" id="popup-details" style="display:none"></div>
+    <button class="btn btn-primary btn-full" onclick="closePopup()" id="popup-btn">OK</button>
+  </div>
+</div>
+
+<footer>
+  <strong>Spital Central</strong> · Portal Plăți Securizat · © 2026 · Toate drepturile rezervate<br>
+  <span style="font-size:.75rem;margin-top:4px;display:block">Platforma utilizează criptare SSL și este conformă cu standardele PCI DSS.</span>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════════
+//  EMAILJS INIT
+//  Înlocuiți YOUR_PUBLIC_KEY cu cheia publică EmailJS
+//  și configurați template-ul conform instrucțiunilor
+// ══════════════════════════════════════════════════
+(function(){
+  emailjs.init('DTKSZMu08---RUaMW'); // 🔑 Cheia din index.html
+})();
+
+// ══════════════════════════════════════════════════
+//  DATE
+// ══════════════════════════════════════════════════
+let facturi = [];
+
+async function loadDataFromBackend() {
+  try {
+    const res = await fetch('/api/data');
+    const data = await res.json();
+    facturi = data.facturi || [];
+    
+    // Process URL params after load
+    const params = new URLSearchParams(location.search);
+    const cod = params.get('cod');
+    if (cod) {
+      document.getElementById('srch-cod').value = cod.toUpperCase();
+      cautaFactura();
+    }
+  } catch (err) {
+    console.error('Eroare conexiune backend:', err);
+  }
+}
+window.addEventListener('DOMContentLoaded', loadDataFromBackend);
+let selectedInv = null;
+let payMethod   = 'card';
+
+// ══════════════════════════════════════════════════
+//  CAUTARE FACTURA
+// ══════════════════════════════════════════════════
+function cautaFactura() {
+
+  const cod  = document.getElementById('srch-cod').value.trim().toUpperCase();
+  const nume = document.getElementById('srch-nume').value.trim().toLowerCase();
+  const pren = document.getElementById('srch-prenume').value.trim().toLowerCase();
+
+  let results = [];
+  if (cod) {
+    results = facturi.filter(f => f.codFactura === cod);
+  } else if (nume || pren) {
+    results = facturi.filter(f =>
+      (!nume || f.numeP.toLowerCase().includes(nume)) &&
+      (!pren || f.prenumeP.toLowerCase().includes(pren))
+    );
+  }
+
+  if (results.length === 0) {
+    showInvNotFound('Nicio factură găsită cu datele introduse. Verificați codul sau numele.');
+    return;
+  }
+
+  if (results.length === 1) {
+    selectInvoice(results[0]);
+  } else {
+    // Multiple invoices
+    showMultipleInvoices(results);
+  }
+}
+
+function showMultipleInvoices(list) {
+  const mi = document.getElementById('multi-invoices');
+  mi.style.display = 'block';
+  mi.innerHTML = `
+    <div style="font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px">
+      ${list.length} facturi găsite – selectați:
+    </div>
+    ${list.map(f => `
+      <div onclick="selectInvoice(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(f))}')))"
+        style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px;cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center"
+        onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div>
+          <div style="font-weight:600;font-size:.9rem">${f.codFactura}</div>
+          <div style="font-size:.82rem;color:var(--muted)">${f.serviciu}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700;color:var(--navy)">${Number(f.suma).toFixed(2)} RON</div>
+          <span style="font-size:.75rem;padding:2px 8px;border-radius:100px;background:${f.achitata?'rgba(39,174,96,.1)':'rgba(192,57,43,.1)'};color:${f.achitata?'var(--green)':'var(--red)'}">
+            ${f.achitata ? '✅ Achitată' : '⏳ Neachitată'}
+          </span>
+        </div>
+      </div>
+    `).join('')}
+  `;
+  renderInvBody(list[0]);
+}
+
+function selectInvoice(inv) {
+  selectedInv = inv;
+  document.getElementById('multi-invoices').style.display = 'none';
+
+  // Render preview
+  renderInvBody(inv);
+
+  if (inv.achitata) {
+    showPopup({icon:'✅', iconClass:'success', title:'Factură deja achitată', desc:`Factura ${inv.codFactura} a fost deja achitată. Nu mai este necesară nicio plată.`});
+    return;
+  }
+
+  // Prefill email from invoice
+  if (inv.emailP) document.getElementById('pay-email').value = inv.emailP;
+
+  // Set iban ref
+  document.getElementById('ref-display').textContent  = inv.codFactura;
+  document.getElementById('iban-suma').textContent     = Number(inv.suma).toFixed(2);
+  document.getElementById('cash-cod').textContent      = inv.codFactura;
+  document.getElementById('app-cod').textContent       = inv.codFactura;
+  document.getElementById('pay-subtitle').textContent  = `Factură: ${inv.codFactura} · ${Number(inv.suma).toFixed(2)} RON`;
+
+  showStep('s-pay');
+}
+
+function renderInvBody(inv) {
+  const tva    = inv.suma / 1.19 * 0.19;
+  const fara   = inv.suma - tva;
+  document.getElementById('inv-body').innerHTML = `
+    <div class="inv-row"><span class="label">Cod factură</span><span class="value">${inv.codFactura}</span></div>
+    <div class="inv-row"><span class="label">Pacient</span><span class="value">${inv.numeP} ${inv.prenumeP}</span></div>
+    <div class="inv-row"><span class="label">Serviciu</span><span class="value" style="font-size:.83rem">${inv.serviciu}</span></div>
+    <div class="inv-row"><span class="label">Data emiterii</span><span class="value">${inv.data || '06.05.2026'}</span></div>
+    <div class="inv-row"><span class="label">Scadență</span><span class="value">${inv.scadenta || '06.06.2026'}</span></div>
+    <div class="inv-row"><span class="label">Subtotal (fără TVA)</span><span class="value">${fara.toFixed(2)} RON</span></div>
+    <div class="inv-row"><span class="label">TVA (19%)</span><span class="value">${tva.toFixed(2)} RON</span></div>
+    <div class="inv-row">
+      <span class="label">Status</span>
+      <span class="value">
+        <span class="inv-status ${inv.achitata ? 'paid' : 'unpaid'}">
+          ${inv.achitata ? '✅ Achitată' : '⏳ Neachitată'}
+        </span>
+      </span>
+    </div>
+    <div class="inv-total">
+      <span class="t-label">Total de plată</span>
+      <span class="t-value">${Number(inv.suma).toFixed(2)} RON</span>
+    </div>
+  `;
+}
+
+function showInvNotFound(msg) {
+  document.getElementById('inv-body').innerHTML = `
+    <div class="inv-not-found">
+      <div class="nf-icon">❌</div>
+      <p>${msg}</p>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════
+//  METODA PLATA
+// ══════════════════════════════════════════════════
+function selectMethod(m) {
+  payMethod = m;
+  ['card','iban','cash','app'].forEach(id => {
+    document.getElementById('m-'+id).classList.toggle('selected', id === m);
+    document.getElementById('method-'+id).classList.toggle('active', id === m);
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  FORMAT CARD
+// ══════════════════════════════════════════════════
+function formatCard(inp) {
+  let v = inp.value.replace(/\D/g,'').substring(0,16);
+  inp.value = v.replace(/(.{4})/g,'$1 ').trim();
+  const brand = document.getElementById('card-brand');
+  if (v.startsWith('4'))      { brand.textContent='💳'; brand.className='card-brand show'; }
+  else if (v.startsWith('5')) { brand.textContent='🔷'; brand.className='card-brand show'; }
+  else if (v.startsWith('3')) { brand.textContent='🟡'; brand.className='card-brand show'; }
+  else                        { brand.className='card-brand'; }
+}
+function formatExp(inp) {
+  let v = inp.value.replace(/\D/g,'');
+  if (v.length >= 2) v = v.substring(0,2)+'/'+v.substring(2,4);
+  inp.value = v;
+}
+
+// ══════════════════════════════════════════════════
+//  PLATA
+// ══════════════════════════════════════════════════
+async function platesteFactura() {
+  if (!selectedInv) return;
+
+  const email = document.getElementById('pay-email').value.trim();
+  const errEl = document.getElementById('pay-email-err');
+
+  if (!email.endsWith('@gmail.com')) {
+    errEl.classList.add('show');
+    document.getElementById('pay-email').classList.add('error');
+    return;
+  }
+  errEl.classList.remove('show');
+  document.getElementById('pay-email').classList.remove('error');
+
+  if (payMethod === 'card') {
+    const nr   = document.getElementById('card-nr').value.replace(/\s/g,'');
+    const exp  = document.getElementById('card-exp').value;
+    const cvv  = document.getElementById('card-cvv').value;
+    const name = document.getElementById('card-name').value.trim();
+    if (nr.length < 16 || exp.length < 5 || cvv.length < 3 || !name) {
+      showPopup({icon:'⚠️', iconClass:'error', title:'Date card incomplete', desc:'Completați toate câmpurile cardului bancar.'});
+      return;
+    }
+  }
+
+  if (payMethod === 'iban') {
+    showPopup({
+      icon:'🏦', iconClass:'info',
+      title:'Transfer inițiat',
+      desc:'Plata prin virament a fost înregistrată. Veți primi confirmarea pe email după procesarea transferului (1-3 zile lucrătoare).',
+    });
+    sendConfirmationEmail(email, selectedInv, 'Virament bancar', false);
+    return;
+  }
+  if (payMethod === 'cash') {
+    showPopup({
+      icon:'💵', iconClass:'info',
+      title:'Notă salvată',
+      desc:'Vă rugăm să vă prezentați la casieria spitalului cu codul facturii. Program: L–V 07:00–20:00, S 09:00–14:00.',
+    });
+    return;
+  }
+  if (payMethod === 'app') {
+    showPopup({
+      icon:'📱', iconClass:'info',
+      title:'Redirecționat',
+      desc:'Deschideți aplicația mobilă Spital Central și introduceți codul de plată pentru a finaliza tranzacția.',
+    });
+    return;
+  }
+
+  // CARD: simulate processing
+  setLoading(true);
+  await sleep(2200);
+  setLoading(false);
+
+  // Mark as paid
+  const idx = facturi.findIndex(f => f.codFactura === selectedInv.codFactura);
+  if (idx !== -1) facturi[idx].achitata = true;
+  
+  // POST update to backend
+  await fetch('/api/factura', { 
+    method:'POST', 
+    headers:{'Content-Type':'application/json'}, 
+    body:JSON.stringify({...selectedInv, achitata: true}) 
+  });
+  selectedInv.achitata = true;
+  renderInvBody(selectedInv);
+
+  // Send email
+  await sendConfirmationEmail(email, selectedInv, 'Card bancar', true);
+
+  launchConfetti();
+  showPopup({
+    icon:'🎉', iconClass:'success',
+    title:'Plată confirmată!',
+    desc:'Tranzacția a fost procesată cu succes. Chitanța a fost trimisă pe email.',
+    details:`
+      <strong>Factură:</strong> ${selectedInv.codFactura}<br>
+      <strong>Pacient:</strong> ${selectedInv.numeP} ${selectedInv.prenumeP}<br>
+      <strong>Serviciu:</strong> ${selectedInv.serviciu}<br>
+      <strong>Sumă achitată:</strong> <span style="color:var(--green);font-weight:700">${Number(selectedInv.suma).toFixed(2)} RON</span><br>
+      <strong>Chitanță trimisă pe:</strong> ${email}
+    `,
+    btnText:'Excelent! ✨'
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  EMAILJS – TRIMITERE EMAIL REAL
+// ══════════════════════════════════════════════════
+async function sendConfirmationEmail(toEmail, inv, metoda, esteAchitata) {
+  const tva  = inv.suma / 1.19 * 0.19;
+  const fara = inv.suma - tva;
+
+  const templateParams = {
+    to_email:    toEmail,
+    to_name:     inv.numeP + ' ' + inv.prenumeP,
+    cod_factura: inv.codFactura,
+    serviciu:    inv.serviciu,
+    suma_fara_tva: fara.toFixed(2),
+    tva:         tva.toFixed(2),
+    suma_total:  Number(inv.suma).toFixed(2),
+    metoda_plata:metoda,
+    data_plata:  new Date().toLocaleDateString('ro-RO'),
+    scadenta:    inv.scadenta || '06.06.2026',
+    status:      esteAchitata ? 'ACHITATĂ ✅' : 'În procesare ⏳',
+    spital_iban: 'RO49AAAA1B31007593840000',
+    spital_tel:  '021-SANATATE',
+  };
+
+  try {
+    // 🔑 Înlocuiți 'YOUR_SERVICE_ID' și 'YOUR_TEMPLATE_ID' cu valorile din EmailJS
+    await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams);
+    console.log('[EmailJS] Email trimis cu succes la', toEmail);
+  } catch (err) {
+    console.warn('[EmailJS] Eroare trimitere email:', err);
+    // Nu blocăm fluxul dacă emailul eșuează
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setLoading(on) {
+  document.getElementById('btn-plata-text').style.display = on ? 'none' : 'flex';
+  document.getElementById('btn-spinner').style.display    = on ? 'inline-block' : 'none';
+  document.getElementById('btn-plata').disabled = on;
+}
+
+function showStep(id) {
+  document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function inapoiSearch() {
+  selectedInv = null;
+  showStep('s-search');
+  document.getElementById('inv-body').innerHTML = `<div class="inv-not-found"><div class="nf-icon">🧾</div><p>Introduceți codul facturii sau datele pacientului pentru a vizualiza factura.</p></div>`;
+  document.getElementById('multi-invoices').style.display = 'none';
+}
+
+function copyIBAN() {
+  navigator.clipboard.writeText('RO49AAAA1B31007593840000').then(()=>showToast('IBAN copiat!'));
+}
+function copyRef() {
+  if (!selectedInv) return;
+  navigator.clipboard.writeText(selectedInv.codFactura).then(()=>showToast('Referință copiată!'));
+}
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText='position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;padding:10px 22px;border-radius:100px;font-size:.88rem;font-weight:600;z-index:9999;animation:fadeUp .3s ease';
+  t.textContent = '✅ ' + msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2200);
+}
+
+function showPopup({icon, iconClass, title, desc, details, btnText}) {
+  document.getElementById('popup-icon').textContent   = icon || '✅';
+  document.getElementById('popup-icon').className     = 'popup-icon ' + (iconClass||'success');
+  document.getElementById('popup-title').textContent  = title || '';
+  document.getElementById('popup-desc').textContent   = desc  || '';
+  const det = document.getElementById('popup-details');
+  if (details) { det.innerHTML = details; det.style.display = 'block'; }
+  else det.style.display = 'none';
+  document.getElementById('popup-btn').textContent = btnText || 'OK';
+  document.getElementById('global-popup').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closePopup() {
+  document.getElementById('global-popup').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function launchConfetti() {
+  const colors = ['#27AE60','#2ECC71','#3498DB','#F1C40F','#E67E22','#9B59B6'];
+  for (let i = 0; i < 70; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `
+      left:${Math.random()*100}vw; top:-10px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      width:${Math.random()*10+5}px; height:${Math.random()*10+5}px;
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      animation-duration:${Math.random()*2+2}s;
+      animation-delay:${Math.random()*.8}s;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+}
+
+// Pre-load logic moved to loadDataFromBackend
+</script>
+</body>
+</html>

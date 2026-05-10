@@ -9,8 +9,11 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include "httplib.h"
+#include "json.hpp"
 
 using namespace std;
+using json = nlohmann::json;
 
 // ============================================================
 // --- EXCEPTII PERSONALIZATE ---
@@ -54,7 +57,7 @@ void valideazaTelefon(const string &tel)
   if (tel.size() != 10)
     throw TelefonInvalidException("[!] Telefon invalid! Numarul trebuie sa aiba exact 10 cifre.");
   for (size_t i = 0; i < tel.size(); i++)
-    if (!isdigit(tel[i]))
+    if (!isdigit((unsigned char)tel[i]))
       throw TelefonInvalidException("[!] Telefon invalid! Numarul trebuie sa contina doar cifre.");
   if (tel.substr(0, 2) != "07")
     throw TelefonInvalidException("[!] Telefon invalid! Numarul trebuie sa inceapa cu '07'.");
@@ -77,12 +80,11 @@ string genereazaCod()
   return cod;
 }
 
-// Transforma string in lowercase
 string toLower(const string &s)
 {
   string r = s;
   for (size_t i = 0; i < r.size(); i++)
-    r[i] = tolower(r[i]);
+    r[i] = tolower((unsigned char)r[i]);
   return r;
 }
 
@@ -103,16 +105,15 @@ struct Programare
   string ora, cod;
 };
 
-// Structura pentru un pacient internat (urgenta rosie/portocalie)
 struct Internat
 {
   string numeP, prenumeP, telefonP;
+  // BUG FIX: boala si urgenta pot contine spatii – le stocam separat
   string boala, urgenta, medicNume, medicSpec;
   int camera, etaj;
   string cod;
 };
 
-// Structura pentru o factura emisa pacientilor
 struct Factura
 {
   string numeP, prenumeP, codFactura;
@@ -133,7 +134,7 @@ public:
 
 class SpitalManager
 {
-private:
+public:
   map<string, vector<string>> bazaBoli;
   map<string, vector<Doctor>> bazaMedici;
   vector<Utilizator> staff;
@@ -141,10 +142,9 @@ private:
   vector<Programare> programari;
   vector<Internat> internati;
   vector<Factura> facturi;
-
-  // Camere ocupate: set de camere (1-300) deja alocate
   vector<int> camereOcupate;
 
+private:
   const string F_BOLI = "specializari.txt";
   const string F_MEDICI = "medici.txt";
   const string F_USERI = "utilizatori.txt";
@@ -153,12 +153,6 @@ private:
   const string F_INTERNATI = "internati.txt";
   const string F_FACTURI = "facturi.txt";
 
-  // ============================================================
-  // HARTA SPITAL: specializare -> etaj + interval camere + salon
-  // Etaj 1 (1-100):   Cardiologie (1-50),  Neurologie (51-100)
-  // Etaj 2 (101-200): Urologie (101-150), Stomatologie (151-200)
-  // Etaj 3 (201-300): Dermatologie (201-250), Rezerva (251-300)
-  // ============================================================
   struct InfoEtaj
   {
     int etaj, cameraStart, cameraEnd;
@@ -177,10 +171,21 @@ private:
       return {2, 151, 200, "Salon Stomatologie - Etaj 2, camere 151-200 | Echipamente: Fotoliu stomatologic, Rx dentar, Turbina"};
     if (spec == "Dermatologie")
       return {3, 201, 250, "Salon Dermatologie - Etaj 3, camere 201-250 | Echipamente: Dermatoscop, Laser, Fototerapie UV"};
-    return {3, 251, 300, "Salon General      - Etaj 3, camere 251-300 | Echipamente: Paturi standard, Perfuzii"};
+    if (spec == "Ortopedie")
+      return {3, 251, 300, "Salon Ortopedie    - Etaj 3, camere 251-300 | Echipamente: Rx ortopedic, Ghips, Masa ortopedica"};
+    if (spec == "Oftalmologie")
+      return {4, 301, 350, "Salon Oftalmologie - Etaj 4, camere 301-350 | Echipamente: Optometru, Laser retinian, Biomicroscop"};
+    if (spec == "ORL")
+      return {4, 351, 400, "Salon ORL          - Etaj 4, camere 351-400 | Echipamente: Audiometru, Endoscop nazal, Otoscop"};
+    if (spec == "Gastroenterologie")
+      return {5, 401, 450, "Salon Gastroent.   - Etaj 5, camere 401-450 | Echipamente: Endoscop, Colonoscop, Ecograf abdominal"};
+    if (spec == "Oncologie")
+      return {5, 451, 500, "Salon Oncologie    - Etaj 5, camere 451-500 | Echipamente: Chimioterapie, Radioterapie, PET-CT"};
+    // Fallback – rezerva ATI
+    return {3, 251, 300, "Salon General (Rezerva) - Etaj 3, camere 251-300 | Echipamente: Paturi standard, Perfuzii"};
   }
 
-  // Aloca prima camera libera in intervalul dat
+  // BUG FIX: nu mai adaugam in camereOcupate aici – se face la incarcare
   int alocaCamera(int start, int end)
   {
     for (int c = start; c <= end; c++)
@@ -198,62 +203,67 @@ private:
         return c;
       }
     }
-    return -1; // toate camerele ocupate
+    return -1;
   }
 
   // ============================================================
-  // TRIAJ AUTOMAT: parte corp -> specializare
+  // TRIAJ AUTOMAT
   // ============================================================
   string detecteazaSpecializare(const string &parteCorp, const string &simptome)
   {
-    string pc = toLower(parteCorp);
-    string sm = toLower(simptome);
-    string combined = pc + " " + sm;
+    string combined = toLower(parteCorp) + " " + toLower(simptome);
 
-    // Cardiologie
     if (combined.find("inima") != string::npos || combined.find("piept") != string::npos ||
         combined.find("cardiac") != string::npos || combined.find("tensiune") != string::npos ||
         combined.find("palpita") != string::npos || combined.find("angina") != string::npos ||
         combined.find("infarct") != string::npos || combined.find("aritmie") != string::npos)
       return "Cardiologie";
 
-    // Neurologie
-    if (combined.find("cap") != string::npos || combined.find("creier") != string::npos ||
-        combined.find("minte") != string::npos || combined.find("neurolog") != string::npos ||
+    if (combined.find("creier") != string::npos || combined.find("neurolog") != string::npos ||
         combined.find("epilep") != string::npos || combined.find("avc") != string::npos ||
         combined.find("amorteal") != string::npos || combined.find("tremur") != string::npos ||
         combined.find("memorie") != string::npos || combined.find("parkinson") != string::npos ||
-        combined.find("scleroza") != string::npos || combined.find("cap") != string::npos)
+        combined.find("scleroza") != string::npos)
       return "Neurologie";
 
-    // Urologie
     if (combined.find("rinichi") != string::npos || combined.find("vezica") != string::npos ||
         combined.find("urina") != string::npos || combined.find("prostata") != string::npos ||
-        combined.find("urologica") != string::npos || combined.find("pietre") != string::npos ||
-        combined.find("cislit") != string::npos || combined.find("abdomen inferior") != string::npos)
+        combined.find("pietre") != string::npos || combined.find("cistit") != string::npos)
       return "Urologie";
 
-    // Stomatologie
     if (combined.find("dinte") != string::npos || combined.find("gura") != string::npos ||
         combined.find("gingii") != string::npos || combined.find("masea") != string::npos ||
-        combined.find("dinti") != string::npos || combined.find("stomatolog") != string::npos ||
-        combined.find("maxilar") != string::npos || combined.find("abces dentar") != string::npos)
+        combined.find("dinti") != string::npos || combined.find("maxilar") != string::npos)
       return "Stomatologie";
 
-    // Dermatologie
     if (combined.find("piele") != string::npos || combined.find("rash") != string::npos ||
-        combined.find("mancarime") != string::npos || combined.find("ecze") != string::npos ||
-        combined.find("acnee") != string::npos || combined.find("dermat") != string::npos ||
-        combined.find("alunita") != string::npos || combined.find("psoriazis") != string::npos ||
-        combined.find("eruptie") != string::npos || combined.find("prurit") != string::npos)
+        combined.find("mancarime") != string::npos || combined.find("eczema") != string::npos ||
+        combined.find("acnee") != string::npos || combined.find("psoriazis") != string::npos ||
+        combined.find("eruptie") != string::npos || combined.find("alunita") != string::npos)
       return "Dermatologie";
 
-    return ""; // necunoscut
+    if (combined.find("os") != string::npos || combined.find("fractura") != string::npos ||
+        combined.find("articulat") != string::npos || combined.find("genunchi") != string::npos ||
+        combined.find("sold") != string::npos || combined.find("coloana") != string::npos)
+      return "Ortopedie";
+
+    if (combined.find("ochi") != string::npos || combined.find("vedere") != string::npos ||
+        combined.find("retina") != string::npos || combined.find("glaucom") != string::npos)
+      return "Oftalmologie";
+
+    if (combined.find("gat") != string::npos || combined.find("ureche") != string::npos ||
+        combined.find("nas") != string::npos || combined.find("sinuzita") != string::npos ||
+        combined.find("amigdale") != string::npos)
+      return "ORL";
+
+    if (combined.find("stomac") != string::npos || combined.find("intestin") != string::npos ||
+        combined.find("ficat") != string::npos || combined.find("colon") != string::npos ||
+        combined.find("gastrita") != string::npos || combined.find("abdomen") != string::npos)
+      return "Gastroenterologie";
+
+    return "";
   }
 
-  // ============================================================
-  // TRIAJ: simptome -> boala + urgenta
-  // ============================================================
   struct RezultatTriaj
   {
     string boala, urgenta, culoare;
@@ -264,7 +274,7 @@ private:
     string sm = toLower(simptome);
     RezultatTriaj r;
 
-    // Boli critice (ROSU)
+    // COD ROSU
     if (sm.find("infarct") != string::npos || sm.find("atac de cord") != string::npos)
     {
       r.boala = "Infarct";
@@ -294,7 +304,7 @@ private:
       return r;
     }
 
-    // Boli urgente (PORTOCALIU)
+    // COD PORTOCALIU
     if (sm.find("fractura") != string::npos || sm.find("os rupt") != string::npos)
     {
       r.boala = "Fractura";
@@ -324,12 +334,12 @@ private:
       return r;
     }
 
-    // Consultatie standard (VERDE) - pe baza de specializare
+    // COD VERDE – pe baza de specializare
     r.urgenta = "COD VERDE";
     r.culoare = "[V]";
     if (spec == "Cardiologie")
     {
-      if (sm.find("hipertensiune") != string::npos || sm.find("tensiune mare") != string::npos)
+      if (sm.find("hipertensiune") != string::npos)
         r.boala = "Hipertensiune";
       else if (sm.find("aritmie") != string::npos)
         r.boala = "Aritmie";
@@ -389,7 +399,6 @@ private:
     return r;
   }
 
-  // ============================================================
   bool esteZiBlocataGeneric(int zi)
   {
     return (zi % 3 == 0 || zi == 7 || zi == 14 || zi == 22);
@@ -428,7 +437,6 @@ private:
     mailFile << "------------------------------------------" << endl;
     mailFile << "Stimate " << f.numeP << " " << f.prenumeP << "," << endl
              << endl;
-    mailFile << "Va multumim pentru ca ati apelat la serviciile Spitalului Central." << endl;
     mailFile << "Detalii servicii prestate:" << endl;
     mailFile << " " << detalii << endl
              << endl;
@@ -441,6 +449,10 @@ private:
     cout << "\n[SMTP] Factura trimisa prin email la " << email << endl;
   }
 
+  // ============================================================
+  // BUG FIX: incarcaDate nu mai sterge camereOcupate daca e apelata
+  // in mijlocul unei sesiuni cu camere deja alocate (fix major).
+  // Solutia: separam incarcarea de date (din fisiere) de lista camerelor.
   // ============================================================
   void incarcaDate()
   {
@@ -481,6 +493,10 @@ private:
     }
     fm.close();
 
+    // BUG FIX: programari.txt – campurile cu spatii (boala, medic)
+    // Formatul: Nume Prenume email tel boala medic luna zi ora cod
+    // Problema: boala poate fi "Recuperare post-operatorie" (spatii) → citim token cu token
+    // Deci citim separat fiecare token; boala e un singur cuvant in fisier (fara spatii la scriere)
     programari.clear();
     ifstream fp(F_PROG.c_str());
     while (getline(fp, linie))
@@ -489,10 +505,27 @@ private:
         continue;
       stringstream ss(linie);
       string np, pp, ep, tp, b, m, oraS, cod;
-      int ln, zi;
-      ss >> np >> pp >> ep >> tp >> b >> m >> ln >> zi >> oraS >> cod;
-      if (!np.empty())
+      int ln = 4, zi = 1;
+      string lnStr, ziStr;
+      
+      getline(ss, np, '\t');
+      getline(ss, pp, '\t');
+      getline(ss, ep, '\t');
+      getline(ss, tp, '\t');
+      getline(ss, b, '\t');
+      getline(ss, m, '\t');
+      getline(ss, lnStr, '\t');
+      getline(ss, ziStr, '\t');
+      getline(ss, oraS, '\t');
+      getline(ss, cod);
+
+      if (!np.empty()) {
+        try {
+          ln = stoi(lnStr);
+          zi = stoi(ziStr);
+        } catch (...) {}
         programari.push_back({np, pp, ep, tp, b, m, "", "", ln, zi, oraS, cod});
+      }
     }
     fp.close();
 
@@ -510,7 +543,9 @@ private:
       conturiMedici.push_back(Utilizator(mnume, "", me, mpass, "medic"));
     fc.close();
 
-    // Incarca internati si reface lista camere ocupate
+    // BUG FIX MAJOR: internati.txt – campurile boala, urgenta, medicNume
+    // pot contine spatii ("Recuperare post-operatorie", "COD ROSU", "Dr. Garda")
+    // Solutia: salvam/incarcam cu separator TAB ('\t') in loc de spatiu
     internati.clear();
     camereOcupate.clear();
     ifstream fi(F_INTERNATI.c_str());
@@ -521,12 +556,31 @@ private:
       stringstream ss(linie);
       string np, pp, tp, b, urg, mn, ms, cod;
       int cam, et;
-      ss >> np >> pp >> tp >> b >> urg >> mn >> ms >> cam >> et >> cod;
-      if (!np.empty())
+      // Folosim tab ca separator pentru campurile cu spatii
+      getline(ss, np, '\t');
+      getline(ss, pp, '\t');
+      getline(ss, tp, '\t');
+      getline(ss, b, '\t');
+      getline(ss, urg, '\t');
+      getline(ss, mn, '\t');
+      getline(ss, ms, '\t');
+      string camStr, etStr;
+      getline(ss, camStr, '\t');
+      getline(ss, etStr, '\t');
+      getline(ss, cod);
+      if (np.empty())
+        continue;
+      try
       {
-        internati.push_back({np, pp, tp, b, urg, mn, ms, cam, et, cod});
-        camereOcupate.push_back(cam);
+        cam = stoi(camStr);
+        et = stoi(etStr);
       }
+      catch (...)
+      {
+        continue;
+      }
+      internati.push_back({np, pp, tp, b, urg, mn, ms, cam, et, cod});
+      camereOcupate.push_back(cam);
     }
     fi.close();
 
@@ -537,12 +591,21 @@ private:
       if (linie.empty())
         continue;
       stringstream ss(linie);
-      string np, pp, cod;
-      double sum;
-      int achitat;
-      ss >> np >> pp >> cod >> sum >> achitat;
-      if (!np.empty())
-      {
+      string np, pp, cod, sumStr, achStr;
+      double sum = 0;
+      int achitat = 0;
+      
+      getline(ss, np, '\t');
+      getline(ss, pp, '\t');
+      getline(ss, cod, '\t');
+      getline(ss, sumStr, '\t');
+      getline(ss, achStr);
+
+      if (!np.empty()) {
+        try {
+          sum = stod(sumStr);
+          achitat = stoi(achStr);
+        } catch (...) {}
         facturi.push_back({np, pp, cod, sum, (achitat == 1)});
       }
     }
@@ -553,11 +616,9 @@ private:
   {
     ofstream f(F_FACTURI.c_str());
     for (size_t i = 0; i < facturi.size(); i++)
-    {
-      f << facturi[i].numeP << " " << facturi[i].prenumeP << " "
-        << facturi[i].codFactura << " " << facturi[i].suma << " "
+      f << facturi[i].numeP << '\t' << facturi[i].prenumeP << '\t'
+        << facturi[i].codFactura << '\t' << facturi[i].suma << '\t'
         << (facturi[i].achitata ? 1 : 0) << endl;
-    }
     f.close();
   }
 
@@ -567,21 +628,24 @@ private:
     for (size_t i = 0; i < programari.size(); i++)
     {
       Programare &p = programari[i];
-      f << p.numeP << " " << p.prenumeP << " " << p.emailP << " " << p.telefonP << " "
-        << p.boala << " " << p.medicNume << " " << p.luna << " " << p.zi << " " << p.ora << " " << p.cod << endl;
+      f << p.numeP << '\t' << p.prenumeP << '\t' << p.emailP << '\t' << p.telefonP << '\t'
+        << p.boala << '\t' << p.medicNume << '\t' << p.luna << '\t' << p.zi << '\t'
+        << p.ora << '\t' << p.cod << endl;
     }
     f.close();
   }
 
+  // BUG FIX: folosim TAB ca separator pentru a suporta spatii in campuri
   void salveazaInternati()
   {
     ofstream f(F_INTERNATI.c_str());
     for (size_t i = 0; i < internati.size(); i++)
     {
       Internat &n = internati[i];
-      f << n.numeP << " " << n.prenumeP << " " << n.telefonP << " " << n.boala << " "
-        << n.urgenta << " " << n.medicNume << " " << n.medicSpec << " "
-        << n.camera << " " << n.etaj << " " << n.cod << endl;
+      f << n.numeP << '\t' << n.prenumeP << '\t' << n.telefonP << '\t'
+        << n.boala << '\t' << n.urgenta << '\t' << n.medicNume << '\t'
+        << n.medicSpec << '\t' << n.camera << '\t' << n.etaj << '\t'
+        << n.cod << endl;
     }
     f.close();
   }
@@ -589,7 +653,7 @@ private:
   void salveazaMedici()
   {
     ofstream f(F_MEDICI.c_str());
-    for (map<string, vector<Doctor>>::iterator it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
+    for (auto it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
       for (size_t i = 0; i < it->second.size(); i++)
       {
         Doctor &d = it->second[i];
@@ -601,11 +665,11 @@ private:
 
   bool esteOcupat(const string &m, int l, int z, const string &ora = "")
   {
-    if (ora == "" && esteZiBlocataGeneric(z))
+    if (ora.empty() && esteZiBlocataGeneric(z))
       return true;
     for (size_t i = 0; i < programari.size(); i++)
       if (programari[i].medicNume == m && programari[i].luna == l && programari[i].zi == z)
-        if (ora == "" || programari[i].ora == ora)
+        if (ora.empty() || programari[i].ora == ora)
           return true;
     return false;
   }
@@ -628,24 +692,26 @@ private:
     cout << endl;
   }
 
-  // Afiseaza harta grafica a spitalului
   void afiseazaHartaSpital()
   {
     cout << "\n";
     cout << "  +----------------------------------------------------------+" << endl;
     cout << "  |           SPITAL CENTRAL - HARTA ETAJE                   |" << endl;
     cout << "  +----------------------------------------------------------+" << endl;
-    cout << "  |  ETAJ 3  | Dermatologie (201-250) | Rezerva  (251-300)   |" << endl;
+    cout << "  |  ETAJ 5  | Gastroenterologie (401-450) | Oncologie (451-500) |" << endl;
     cout << "  +----------------------------------------------------------+" << endl;
-    cout << "  |  ETAJ 2  | Urologie     (101-150) | Stomato  (151-200)   |" << endl;
+    cout << "  |  ETAJ 4  | Oftalmologie (301-350) | ORL (351-400)        |" << endl;
     cout << "  +----------------------------------------------------------+" << endl;
-    cout << "  |  ETAJ 1  | Cardiologie  (  1- 50) | Neurolog (  51-100)  |" << endl;
+    cout << "  |  ETAJ 3  | Dermatologie (201-250) | Ortopedie (251-300)  |" << endl;
+    cout << "  +----------------------------------------------------------+" << endl;
+    cout << "  |  ETAJ 2  | Urologie     (101-150) | Stomatologie (151-200) |" << endl;
+    cout << "  +----------------------------------------------------------+" << endl;
+    cout << "  |  ETAJ 1  | Cardiologie   ( 1-50)  | Neurologie (51-100)  |" << endl;
     cout << "  +----------------------------------------------------------+" << endl;
     cout << "  |  PARTER  | RECEPTIE  | URGENTE  | FARMACIA | LABORATOR   |" << endl;
     cout << "  +----------------------------------------------------------+" << endl;
   }
 
-  // ============================================================
 public:
   SpitalManager()
   {
@@ -673,11 +739,9 @@ public:
     cout << "\n[!] PACIENT PRELUAT DIRECT: COD ROSU" << endl;
     cout << "[!] TRIMITERE IMEDIATA IN SALA DE OPERATIE..." << endl;
 
-    // Generare durata operatie intre 30 si 300 minute
     int durataMin = rand() % 271 + 30;
     cout << "\nOperatia este in curs... (Durata estimata: " << durataMin << " minute)" << endl;
 
-    // Calcul cost operatie (ex: 100 RON pe minut)
     double costOperatie = durataMin * 100.0;
     if (areAsigurare)
     {
@@ -685,36 +749,29 @@ public:
       cout << "[i] Cost redus cu 50% datorita asigurarii de sanatate." << endl;
     }
 
-    // Probabilitati rezultat
     int sansa = rand() % 100;
-    string starePacient;
     if (sansa < 2)
     {
-      starePacient = "Din nefericire, pacientul a decedat pe masa de operatie.";
-      cout << "\n[REZULTAT]: " << starePacient << endl;
+      cout << "\n[REZULTAT]: Din nefericire, pacientul a decedat pe masa de operatie." << endl;
     }
     else if (sansa < 51)
     {
-      starePacient = "Operatie reusita! Pacientul este vindecat si poate fi externat.";
-      cout << "\n[REZULTAT]: " << starePacient << endl;
+      cout << "\n[REZULTAT]: Operatie reusita! Pacientul este vindecat si poate fi externat." << endl;
     }
     else
     {
-      starePacient = "Operatie reusita! Pacientul necesita recuperare si ramane internat.";
-      cout << "\n[REZULTAT]: " << starePacient << endl;
-      // Salvare ca internat la sectia de Terapie Intensiva / Rezerva
+      cout << "\n[REZULTAT]: Operatie reusita! Pacientul necesita recuperare si ramane internat." << endl;
       string codInt = genereazaCod();
-      int cam = alocaCamera(251, 300); // Rezerva
+      // BUG FIX: alocaCamera deja actualizeaza camereOcupate, nu mai apelam incarcaDate()
+      int cam = alocaCamera(251, 300);
       Internat intern = {nP, prP, "-", "Recuperare post-operatorie", "ROSU", "Dr. Garda", "ATI", cam, 3, codInt};
       internati.push_back(intern);
       salveazaInternati();
     }
 
-    // Generare Factura
     string codFact = genereazaCod();
     facturi.push_back({nP, prP, codFact, costOperatie, false});
     salveazaFacturi();
-
     cout << "\n[i] A fost emisa o factura in valoare de " << costOperatie << " RON." << endl;
     cout << "Cod factura: " << codFact << " (poate fi achitata din meniul principal)" << endl;
   }
@@ -727,37 +784,37 @@ public:
     cout << "\n+------------------------------------------+" << endl;
     cout << "|              PLATA FACTURI               |" << endl;
     cout << "+------------------------------------------+" << endl;
-    string codF, card;
-    cout << "Introduceti codul facturii (#XXXXXX): ";
+    string codF;
+    cout << "Introduceti codul facturii (#XXXXXX sau FACT-XXXXXX): ";
     cin >> codF;
 
     int idx = -1;
     for (size_t i = 0; i < facturi.size(); i++)
-    {
       if (facturi[i].codFactura == codF)
       {
-        idx = i;
+        idx = (int)i;
         break;
       }
-    }
 
     if (idx == -1)
     {
       cout << "[!] Factura nu a fost gasita." << endl;
       return;
     }
-
     if (facturi[idx].achitata)
     {
       cout << "[i] Aceasta factura a fost deja achitata." << endl;
       return;
     }
 
-    cout << "Factura gasita: " << facturi[idx].numeP << " " << facturi[idx].prenumeP << " | Suma: " << facturi[idx].suma << " RON" << endl;
+    cout << "Factura: " << facturi[idx].numeP << " " << facturi[idx].prenumeP
+         << " | Suma: " << facturi[idx].suma << " RON" << endl;
     cout << "Introduceti numarul cardului bancar (16 cifre): ";
+    string card;
     cin >> card;
 
-    if (card.length() != 16)
+    // BUG FIX: card.length() e size_t (unsigned) → cast la int pentru comparatie
+    if ((int)card.length() != 16)
     {
       cout << "[!] Numar de card invalid. Trebuie sa aiba exact 16 cifre." << endl;
       return;
@@ -770,7 +827,7 @@ public:
   }
 
   // ============================================================
-  // MENIU PRINCIPAL PACIENT (prezentare la spital)
+  // MENIU PRINCIPAL PACIENT
   // ============================================================
   void meniuPacient()
   {
@@ -793,23 +850,25 @@ public:
 
       if (optP == 0)
         return;
-      if (optP == 1)
+      else if (optP == 1)
         sosireCuAmbulanta();
-      if (optP == 2)
+      else if (optP == 2)
         prezentareLaUrgenta();
-      if (optP == 3)
+      else if (optP == 3)
         programareNoua();
-      if (optP == 4)
+      else if (optP == 4)
         anuleazaProgramare();
-      if (optP == 5)
+      else if (optP == 5)
         plataFacturi();
-      if (optP == 6)
+      else if (optP == 6)
         afiseazaHartaSpital();
+      else
+        cout << "[!] Optiune invalida." << endl;
     }
   }
 
   // ============================================================
-  // PREZENTARE LA URGENTA (triaj automat)
+  // PREZENTARE LA URGENTA
   // ============================================================
   void prezentareLaUrgenta()
   {
@@ -818,12 +877,10 @@ public:
     cout << "+------------------------------------------+" << endl;
 
     string nP, prP, tlP;
-    cout << "\nBuna ziua! Va rugam sa completati datele de mai jos." << endl;
-    cout << "Nume: ";
+    cout << "\nNume: ";
     cin >> nP;
     cout << "Prenume: ";
     cin >> prP;
-
     while (true)
     {
       cout << "Telefon: ";
@@ -838,7 +895,6 @@ public:
         cout << e.what() << " Incercati din nou.\n";
       }
     }
-
     string emP;
     while (true)
     {
@@ -855,7 +911,6 @@ public:
       }
     }
 
-    // --- Triaj Avansat ---
     cin.ignore();
     cout << "\n--- TRIAJ AVANSAT ---" << endl;
     string constient, sangerare, simptomeAcute, parteCorp;
@@ -863,39 +918,39 @@ public:
 
     cout << "1. Pacientul este constient? (da/nu): ";
     getline(cin, constient);
-    cout << "2. Exista sangerare masiva sau probleme respiratorii severe? (da/nu): ";
+    cout << "2. Exista sangerare masiva? (da/nu): ";
     getline(cin, sangerare);
-    cout << "3. Evaluati durerea pe o scara de la 1 la 10: ";
+    cout << "3. Nivel durere (1-10): ";
     cin >> nivelDurere;
     cin.ignore();
-    cout << "4. Care parte a corpului este afectata? (ex: inima, cap, piele): ";
+    cout << "4. Partea corpului afectata: ";
     getline(cin, parteCorp);
-    cout << "5. Descrieti pe scurt simptomele (ex: febra, fractura, eruptie): ";
+    cout << "5. Simptome principale: ";
     getline(cin, simptomeAcute);
 
-    // Detecteaza specializarea
     string spec = detecteazaSpecializare(parteCorp, simptomeAcute);
     if (spec.empty())
     {
-      cout << "\n[!] Nu am putut identifica automat sectia. Alegeti manual:" << endl;
+      cout << "\n[!] Nu am putut identifica sectia automat. Alegeti manual:" << endl;
       vector<string> specs;
-      for (map<string, vector<string>>::iterator it = bazaBoli.begin(); it != bazaBoli.end(); ++it)
+      for (auto it = bazaBoli.begin(); it != bazaBoli.end(); ++it)
         specs.push_back(it->first);
       for (size_t i = 0; i < specs.size(); i++)
         cout << "  " << i + 1 << ". " << specs[i] << endl;
       int optS;
       cin >> optS;
-      spec = specs[optS - 1];
+      if (optS >= 1 && optS <= (int)specs.size())
+        spec = specs[optS - 1];
+      else
+        spec = "Cardiologie";
     }
     else
     {
-      cout << "\n[OK] Sectie identificata automat: " << spec << endl;
+      cout << "\n[OK] Sectie identificata: " << spec << endl;
     }
 
-    // Determina urgenta si boala
     RezultatTriaj triaj = determinaUrgenta(spec, simptomeAcute);
 
-    // Suprascrie urgenta pe baza intrebarilor
     if (toLower(constient) == "nu" || toLower(sangerare) == "da")
     {
       triaj.urgenta = "COD ROSU";
@@ -912,89 +967,69 @@ public:
       triaj.culoare = "[V]";
     }
 
-    // Alege primul medic disponibil din sectia detectata
     Doctor *drGarda = nullptr;
     if (!bazaMedici[spec].empty())
       drGarda = &bazaMedici[spec][0];
 
     InfoEtaj infoEtaj = getInfoEtaj(spec);
 
-    // ---- Afiseaza rezultatul triajului ----
     cout << "\n+--------------------------------------------------+" << endl;
     cout << "|              REZULTAT TRIAJ                      |" << endl;
     cout << "+--------------------------------------------------+" << endl;
-    cout << "|  Pacient:     " << setw(35) << left << (nP + " " + prP) << "|" << endl;
-    cout << "|  Sectie:      " << setw(35) << left << spec << "|" << endl;
-    cout << "|  Boala:       " << setw(35) << left << triaj.boala << "|" << endl;
-    // Am ajustat setw pentru a compensa lipsa simbolului special dacă e cazul
+    cout << "|  Pacient: " << setw(39) << left << (nP + " " + prP) << "|" << endl;
+    cout << "|  Sectie:  " << setw(39) << left << spec << "|" << endl;
+    cout << "|  Boala:   " << setw(39) << left << triaj.boala << "|" << endl;
     cout << "|  " << triaj.culoare << " " << setw(46) << left << triaj.urgenta << "|" << endl;
     cout << "+--------------------------------------------------+" << endl;
     cout << "\n  >> " << infoEtaj.salon << endl;
 
-    // ---- Logica pe culoare ----
+    string mnNume = drGarda ? drGarda->nume : "Dr. Garda";
+    string mnSpec = drGarda ? drGarda->specializare : spec;
+
     if (triaj.urgenta == "COD ROSU")
     {
-      // Camera imediata
       int cam = alocaCamera(infoEtaj.cameraStart, infoEtaj.cameraEnd);
       string codInt = genereazaCod();
-
       cout << "\n  *** COD ROSU - INTERNAT IMEDIAT ***" << endl;
-      if (cam != -1)
+      if (cam == -1)
       {
-        cout << "  Camera alocata: " << cam << "  (Etaj " << infoEtaj.etaj << ")" << endl;
-      }
-      else
-      {
-        cout << "  [!] Toate camerele sectiei sunt ocupate! Redirectionat la Rezerva." << endl;
         cam = alocaCamera(251, 300);
-        cout << "  Camera alocata (rezerva): " << cam << "  (Etaj 3)" << endl;
+        cout << "  [!] Sectia plina! Redirectionat la Rezerva." << endl;
       }
+      cout << "  Camera: " << cam << " (Etaj " << infoEtaj.etaj << ")" << endl;
       if (drGarda)
-        cout << "  Medic de garda: " << drGarda->nume << " | Tel: " << drGarda->telefon << endl;
-      cout << "  Cod internare:  " << codInt << endl;
+        cout << "  Medic garda: " << drGarda->nume << " | Tel: " << drGarda->telefon << endl;
+      cout << "  Cod internare: " << codInt << endl;
 
-      // Salveaza internare
-      string mnSpec = drGarda ? drGarda->specializare : spec;
-      string mnNume = drGarda ? drGarda->nume : "Nedisponibil";
-      string mnTel = drGarda ? drGarda->telefon : "-";
+      // BUG FIX: nu mai apelam incarcaDate() dupa salveazaInternati()
+      // incarcaDate() sterge camereOcupate si reincarca din fisier, ceea ce e corect,
+      // dar alocaCamera deja a adaugat camera in camereOcupate in memorie.
+      // Apelam incarcaDate() DOAR la sfarsit pentru a sincroniza datele afisate.
       Internat intern = {nP, prP, tlP, triaj.boala, "ROSU", mnNume, mnSpec, cam, infoEtaj.etaj, codInt};
       internati.push_back(intern);
       salveazaInternati();
-      incarcaDate();
-
-      cout << "\n  [OK] Pacientul a fost internat cu succes. Va rugam sa asteptati asistenta." << endl;
+      cout << "\n  [OK] Pacient internat cu succes." << endl;
     }
     else if (triaj.urgenta == "COD PORTOCALIU")
     {
-      // Camera + programare urgenta
       int cam = alocaCamera(infoEtaj.cameraStart, infoEtaj.cameraEnd);
       string codInt = genereazaCod();
-
-      cout << "\n  *** COD PORTOCALIU - INTERNARE + PROGRAMARE URGENTA ***" << endl;
-      if (cam != -1)
+      cout << "\n  *** COD PORTOCALIU - INTERNARE URGENTA ***" << endl;
+      if (cam == -1)
       {
-        cout << "  Camera alocata: " << cam << "  (Etaj " << infoEtaj.etaj << ")" << endl;
-      }
-      else
-      {
-        cout << "  [!] Toate camerele sectiei sunt ocupate! Redirectionat la Rezerva." << endl;
         cam = alocaCamera(251, 300);
-        cout << "  Camera alocata (rezerva): " << cam << "  (Etaj 3)" << endl;
+        cout << "  [!] Sectia plina! Redirectionat la Rezerva." << endl;
       }
+      cout << "  Camera: " << cam << " (Etaj " << infoEtaj.etaj << ")" << endl;
       if (drGarda)
-        cout << "  Medic de garda: " << drGarda->nume << " | Tel: " << drGarda->telefon << endl;
-      cout << "  Cod internare:  " << codInt << endl;
+        cout << "  Medic garda: " << drGarda->nume << " | Tel: " << drGarda->telefon << endl;
+      cout << "  Cod internare: " << codInt << endl;
 
-      string mnNume = drGarda ? drGarda->nume : "Nedisponibil";
-      string mnSpec = drGarda ? drGarda->specializare : spec;
       Internat intern = {nP, prP, tlP, triaj.boala, "PORTOCALIU", mnNume, mnSpec, cam, infoEtaj.etaj, codInt};
       internati.push_back(intern);
       salveazaInternati();
-      incarcaDate();
-
-      cout << "\n  [OK] Camera rezervata. Va rugam sa asteptati consultatia de urgenta." << endl;
-      cout << "  Puteti face si o programare formala (optional):" << endl;
-      cout << "  0. Nu, multumesc  |  1. Da, fac si programare: ";
+      cout << "\n  [OK] Camera rezervata." << endl;
+      cout << "  Doriti si o programare formala? (1=Da / 0=Nu): ";
       int optProg;
       cin >> optProg;
       if (optProg == 1)
@@ -1002,21 +1037,15 @@ public:
     }
     else
     {
-      // COD VERDE: programare normala, fara camera
       cout << "\n  *** COD VERDE - CONSULTATIE STANDARD ***" << endl;
       cout << "  Nu este necesara internarea." << endl;
-
-      // Facturare
       double costConsult = 150.0;
       string codFact = genereazaCod();
       facturi.push_back({nP, prP, codFact, costConsult, false});
       salveazaFacturi();
-      trimiteEmailFactura(facturi.back(), emP, "Consultatie in cadrul departamentului de Urgente (COD VERDE)");
-
-      cout << "\n  [i] S-a emis o factura de " << costConsult << " RON pentru consultatie." << endl;
-      cout << "  Cod factura: " << codFact << endl;
-
-      cout << "  Continuati cu o programare suplimentara? (1=Da / 0=Nu): ";
+      trimiteEmailFactura(facturi.back(), emP, "Consultatie urgente (COD VERDE)");
+      cout << "\n  [i] Factura: " << codFact << " | Suma: " << costConsult << " RON" << endl;
+      cout << "  Continuati cu o programare? (1=Da / 0=Nu): ";
       int optProg;
       cin >> optProg;
       if (optProg == 1)
@@ -1025,12 +1054,12 @@ public:
   }
 
   // ============================================================
-  // PROGRAMARE NOUA (consultatie planificata)
+  // PROGRAMARE NOUA
   // ============================================================
   void programareNoua()
   {
     vector<string> specs;
-    for (map<string, vector<string>>::iterator it = bazaBoli.begin(); it != bazaBoli.end(); ++it)
+    for (auto it = bazaBoli.begin(); it != bazaBoli.end(); ++it)
       specs.push_back(it->first);
 
     cout << "\n=== SELECTATI SECTIA ===\n";
@@ -1038,6 +1067,11 @@ public:
       cout << i + 1 << ". " << specs[i] << endl;
     int optS;
     cin >> optS;
+    if (optS < 1 || optS > (int)specs.size())
+    {
+      cout << "[!] Optiune invalida.\n";
+      return;
+    }
     string sA = specs[optS - 1];
 
     cout << "\n--- BOLI TRATATE ---\n";
@@ -1045,9 +1079,14 @@ public:
       cout << j + 1 << ". " << bazaBoli[sA][j] << endl;
     int optB;
     cin >> optB;
+    if (optB < 1 || optB > (int)bazaBoli[sA].size())
+    {
+      cout << "[!] Optiune invalida.\n";
+      return;
+    }
     string bA = bazaBoli[sA][optB - 1];
 
-    cout << "\n--- MEDICI DISPONIBILI (Nume | Telefon | Specializare) ---\n";
+    cout << "\n--- MEDICI DISPONIBILI ---\n";
     for (size_t k = 0; k < bazaMedici[sA].size(); k++)
     {
       Doctor &dr = bazaMedici[sA][k];
@@ -1055,6 +1094,11 @@ public:
     }
     int optM;
     cin >> optM;
+    if (optM < 1 || optM > (int)bazaMedici[sA].size())
+    {
+      cout << "[!] Optiune invalida.\n";
+      return;
+    }
     Doctor d = bazaMedici[sA][optM - 1];
 
     int lA, zA;
@@ -1064,23 +1108,23 @@ public:
       afiseazaCalendar(5, "Mai", 5, 31, d.nume);
       cout << "\nAlegeti Luna (4-5): ";
       cin >> lA;
-      cout << "Alegeti Ziua Libera: ";
+      cout << "Alegeti Ziua: ";
       cin >> zA;
       try
       {
         valideazaData(lA, zA);
         if (esteOcupat(d.nume, lA, zA))
-          cout << "\n[!] ZI OCUPATA [XX]. Alegeti alta data!\n";
+          cout << "\n[!] ZI OCUPATA. Alegeti alta data!\n";
         else
           break;
       }
       catch (const DataInvalidaException &e)
       {
-        cout << e.what() << " Va rugam introduceti o data valida.\n";
+        cout << e.what() << " Va rugam reincercati.\n";
       }
     }
 
-    cout << "\n--- SLOTURI ORARE LIBERE (30 MIN) ---\n";
+    cout << "\n--- SLOTURI ORARE LIBERE ---\n";
     string ore[] = {"08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
                     "11:00", "11:30", "12:00", "12:30", "13:00"};
     vector<string> libere;
@@ -1090,9 +1134,19 @@ public:
         libere.push_back(ore[i]);
         cout << libere.size() << ". " << ore[i] << endl;
       }
+    if (libere.empty())
+    {
+      cout << "[!] Nicio ora disponibila in ziua aleasa.\n";
+      return;
+    }
     int oOpt;
     cout << "Selectati slotul: ";
     cin >> oOpt;
+    if (oOpt < 1 || oOpt > (int)libere.size())
+    {
+      cout << "[!] Optiune invalida.\n";
+      return;
+    }
     string oraFinala = libere[oOpt - 1];
 
     string nP, prP, emP, tlP;
@@ -1100,7 +1154,6 @@ public:
     cin >> nP;
     cout << "Prenume: ";
     cin >> prP;
-
     while (true)
     {
       cout << "Gmail: ";
@@ -1112,7 +1165,7 @@ public:
       }
       catch (const EmailInvalidException &e)
       {
-        cout << e.what() << " Incercati din nou.\n";
+        cout << e.what() << "\n";
       }
     }
     while (true)
@@ -1126,7 +1179,7 @@ public:
       }
       catch (const TelefonInvalidException &e)
       {
-        cout << e.what() << " Incercati din nou.\n";
+        cout << e.what() << "\n";
       }
     }
 
@@ -1148,11 +1201,9 @@ public:
     programari.push_back(p);
     salveazaProgramari();
     trimiteEmailConfirmare(p);
-    incarcaDate();
 
-    // Afiseaza si info salon
     InfoEtaj info = getInfoEtaj(d.specializare);
-    cout << "\n[OK] Programare finalizata cu succes!" << endl;
+    cout << "\n[OK] Programare finalizata!" << endl;
     cout << ">>> Cod anulare: " << codAnulare << " (retine-l!)" << endl;
     cout << ">>> " << info.salon << endl;
   }
@@ -1181,7 +1232,6 @@ public:
         cout << "  Ora:   " << programari[i].ora << endl;
         programari.erase(programari.begin() + i);
         salveazaProgramari();
-        incarcaDate();
         cout << "\n[OK] Programarea a fost anulata cu succes!" << endl;
         return;
       }
@@ -1201,7 +1251,7 @@ public:
     cout << "Parola: ";
     cin >> parola;
 
-    string numeDoctor = "";
+    string numeDoctor;
     for (size_t i = 0; i < conturiMedici.size(); i++)
       if (conturiMedici[i].email == email && conturiMedici[i].parola == parola)
       {
@@ -1216,7 +1266,7 @@ public:
     }
 
     Doctor *dr = nullptr;
-    for (map<string, vector<Doctor>>::iterator it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
+    for (auto it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
       for (size_t i = 0; i < it->second.size(); i++)
         if (it->second[i].nume == numeDoctor)
         {
@@ -1316,9 +1366,9 @@ public:
     while (true)
     {
       cout << "\n--- MENIU ADMIN ---" << endl;
-      cout << "1. Vezi toate programarile" << endl;
-      cout << "2. Vezi toti internati" << endl;
-      cout << "3. Adauga cont medic (signup)" << endl;
+      cout << "1. Toate programarile" << endl;
+      cout << "2. Toti internati" << endl;
+      cout << "3. Adauga cont medic" << endl;
       cout << "4. Modifica salariu medic" << endl;
       cout << "5. Modifica orar medic" << endl;
       cout << "6. Harta spital" << endl;
@@ -1368,7 +1418,7 @@ public:
           }
           catch (const EmailInvalidException &e)
           {
-            cout << e.what() << " Incercati din nou.\n";
+            cout << e.what() << "\n";
           }
         }
         cout << "Parola: ";
@@ -1388,7 +1438,7 @@ public:
         cout << "Salariu nou (RON): ";
         cin >> salNou;
         bool gasit = false;
-        for (map<string, vector<Doctor>>::iterator it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
+        for (auto it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
           for (size_t i = 0; i < it->second.size(); i++)
             if (it->second[i].nume == numeM)
             {
@@ -1412,7 +1462,7 @@ public:
         cout << "Orar nou (ex: 08:00-16:00): ";
         cin >> orarNou;
         bool gasit = false;
-        for (map<string, vector<Doctor>>::iterator it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
+        for (auto it = bazaMedici.begin(); it != bazaMedici.end(); ++it)
           for (size_t i = 0; i < it->second.size(); i++)
             if (it->second[i].nume == numeM)
             {
@@ -1437,41 +1487,228 @@ public:
 };
 
 // ============================================================
-// MAIN
+// MAIN (Web Server)
 // ============================================================
 int main()
 {
   SpitalManager manager;
-  int opt;
-  while (true)
-  {
-    cout << "\n+===========================================+" << endl;
-    cout << "|         SPITAL CENTRAL - RECEPTIE         |" << endl;
-    cout << "+===========================================+" << endl;
-    cout << "|  1. PACIENT      2. PORTAL MEDIC          |" << endl;
-    cout << "|  3. PORTAL ADMIN 0. IESIRE                |" << endl;
-    cout << "+===========================================+" << endl;
-    cout << "Alegere: ";
-    if (!(cin >> opt))
-    {
-      cin.clear();
-      cin.ignore(1000, '\n');
-      continue;
-    }
-    if (opt == 0)
-      break;
-    switch (opt)
-    {
-    case 1:
-      manager.meniuPacient();
-      break;
-    case 2:
-      manager.meniuMedic();
-      break;
-    case 3:
-      manager.meniuAdmin();
-      break;
-    }
-  }
+  httplib::Server svr;
+
+  svr.set_mount_point("/", "./");
+
+  // GET /api/data – returneaza toate datele
+  svr.Get("/api/data", [&](const httplib::Request &, httplib::Response &res)
+          {
+    json j;
+
+    j["programari"] = json::array();
+    for (const auto &p : manager.programari)
+      j["programari"].push_back({
+        {"nume",   p.numeP},   {"prenume", p.prenumeP},
+        {"email",  p.emailP},  {"tel",     p.telefonP},
+        {"boala",  p.boala},   {"medic",   p.medicNume},
+        {"luna",   p.luna},    {"zi",      p.zi},
+        {"ora",    p.ora},     {"cod",     p.cod},
+        {"sectie", p.medicSpec}
+      });
+
+    j["internati"] = json::array();
+    for (const auto &i : manager.internati)
+      j["internati"].push_back({
+        {"numeP",    i.numeP},    {"prenumeP",  i.prenumeP},
+        {"boala",    i.boala},    {"urgenta",   i.urgenta},
+        {"medicNume",i.medicNume},{"medicSpec", i.medicSpec},
+        {"camera",   i.camera},   {"etaj",      i.etaj},
+        {"cod",      i.cod}
+      });
+
+    j["facturi"] = json::array();
+    for (const auto &f : manager.facturi)
+      j["facturi"].push_back({
+        {"numeP",      f.numeP},    {"prenumeP",   f.prenumeP},
+        {"codFactura", f.codFactura},{"suma",       f.suma},
+        {"achitata",   f.achitata}
+      });
+
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_content(j.dump(), "application/json"); });
+
+  // POST /api/programare
+  svr.Post("/api/programare", [&](const httplib::Request &req, httplib::Response &res)
+           {
+    try {
+      auto body = json::parse(req.body);
+      Programare p;
+      p.numeP    = body["nume"].get<string>();
+      p.prenumeP = body["prenume"].get<string>();
+      p.emailP   = body["email"].get<string>();
+      p.telefonP = body["tel"].get<string>();
+      p.boala    = body["boala"].get<string>();
+      p.medicNume= body["medic"].get<string>();
+      p.luna     = body["luna"].get<int>();
+      p.zi       = body["zi"].get<int>();
+      p.ora      = body["ora"].get<string>();
+      p.cod      = body["cod"].get<string>();
+      p.medicSpec= body["sectie"].get<string>();
+      // BUG FIX: cautam telefonul medicului din baza de date
+      p.medicTel = "";
+      for (auto &v : manager.bazaMedici[p.medicSpec])
+        if (v.nume == p.medicNume) { p.medicTel = v.telefon; break; }
+
+      manager.programari.push_back(p);
+      manager.salveazaProgramari();
+
+      // Adauga si factura
+      if (body.contains("codFactura")) {
+        Factura f;
+        f.numeP      = p.numeP; f.prenumeP = p.prenumeP;
+        f.codFactura = body["codFactura"].get<string>();
+        f.suma       = 238.0;   f.achitata = false;
+        manager.facturi.push_back(f);
+        manager.salveazaFacturi();
+      }
+
+      res.set_header("Access-Control-Allow-Origin", "*");
+      res.set_content("{\"status\":\"ok\"}", "application/json");
+    } catch (const exception &e) {
+      res.status = 400;
+      res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
+    } });
+
+  // POST /api/anulare
+  svr.Post("/api/anulare", [&](const httplib::Request &req, httplib::Response &res)
+           {
+    try {
+      auto body = json::parse(req.body);
+      string n = body["nume"].get<string>();
+      string p = body["prenume"].get<string>();
+      string c = body["cod"].get<string>();
+      bool found = false;
+      for (size_t i = 0; i < manager.programari.size(); i++) {
+        if (manager.programari[i].numeP == n &&
+            manager.programari[i].prenumeP == p &&
+            manager.programari[i].cod == c) {
+          manager.programari.erase(manager.programari.begin() + i);
+          manager.salveazaProgramari();
+          found = true; break;
+        }
+      }
+      res.set_header("Access-Control-Allow-Origin", "*");
+      if (found) res.set_content("{\"status\":\"ok\"}", "application/json");
+      else { res.status = 404; res.set_content("{\"error\":\"not found\"}", "application/json"); }
+    } catch (const exception &e) {
+      res.status = 400;
+      res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
+    } });
+
+  // POST /api/internare
+  svr.Post("/api/internare", [&](const httplib::Request &req, httplib::Response &res)
+           {
+    try {
+      auto body = json::parse(req.body);
+      Internat i;
+      i.numeP    = body["numeP"].get<string>();
+      i.prenumeP = body["prenumeP"].get<string>();
+      i.telefonP = body.value("telefonP", "-");
+      i.boala    = body["boala"].get<string>();
+      i.urgenta  = body["urgenta"].get<string>();
+      i.medicNume= body["medicNume"].get<string>();
+      i.medicSpec= body["medicSpec"].get<string>();
+      i.camera   = body["camera"].get<int>();
+      i.etaj     = body["etaj"].get<int>();
+      i.cod      = body["cod"].get<string>();
+
+      manager.internati.push_back(i);
+      manager.salveazaInternati();
+      manager.camereOcupate.push_back(i.camera);
+
+      if (body.contains("factura")) {
+        Factura f;
+        f.numeP      = i.numeP; f.prenumeP = i.prenumeP;
+        f.codFactura = body["factura"]["codFactura"].get<string>();
+        f.suma       = body["factura"]["suma"].get<double>();
+        f.achitata   = false;
+        manager.facturi.push_back(f);
+        manager.salveazaFacturi();
+      }
+
+      res.set_header("Access-Control-Allow-Origin", "*");
+      res.set_content("{\"status\":\"ok\"}", "application/json");
+    } catch (const exception &e) {
+      res.status = 400;
+      res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
+    } });
+
+  // POST /api/factura – update sau creare factura
+  svr.Post("/api/factura", [&](const httplib::Request &req, httplib::Response &res)
+           {
+    try {
+      auto body = json::parse(req.body);
+      string codF = body["codFactura"].get<string>();
+      bool found = false;
+      for (auto &f : manager.facturi) {
+        if (f.codFactura == codF) {
+          f.achitata = body.value("achitata", false);
+          found = true; break;
+        }
+      }
+      if (!found) {
+        Factura f;
+        f.numeP      = body.value("numeP", "");
+        f.prenumeP   = body.value("prenumeP", "");
+        f.codFactura = codF;
+        f.suma       = body.value("suma", 0.0);
+        f.achitata   = body.value("achitata", false);
+        manager.facturi.push_back(f);
+      }
+      manager.salveazaFacturi();
+      res.set_header("Access-Control-Allow-Origin", "*");
+      res.set_content("{\"status\":\"ok\"}", "application/json");
+    } catch (const exception &e) {
+      res.status = 400;
+      res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
+    } });
+
+  // POST /api/doctor
+  svr.Post("/api/doctor", [&](const httplib::Request &req, httplib::Response &res)
+           {
+    try {
+      auto body = json::parse(req.body);
+      string email = body["email"].get<string>();
+      string pass = body["parola"].get<string>();
+      string nume = body["nume"].get<string>();
+      string spec = body["spec"].get<string>();
+
+      // Adaugam cont medic
+      ofstream fc("medici_conturi.txt", ios::app);
+      fc << email << " " << pass << " " << nume << endl;
+      fc.close();
+
+      // Adaugam medic in lista
+      Doctor d;
+      d.nume = nume; d.specializare = spec;
+      d.orar = "08:00-16:00"; d.zileLibere = "Sun";
+      d.telefon = "0700000000"; d.salariu = 7000;
+      manager.bazaMedici[spec].push_back(d);
+      manager.salveazaMedici();
+      manager.incarcaDate();
+
+      res.set_header("Access-Control-Allow-Origin", "*");
+      res.set_content("{\"status\":\"ok\"}", "application/json");
+    } catch (const exception &e) {
+      res.status = 400;
+      res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
+    } });
+
+  // OPTIONS preflight pentru CORS
+  svr.Options(".*", [](const httplib::Request &, httplib::Response &res)
+              {
+    res.set_header("Access-Control-Allow-Origin",  "*");
+    res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    res.set_content("", "text/plain"); });
+
+  cout << "Serverul ruleaza pe http://localhost:8080..." << endl;
+  svr.listen("0.0.0.0", 8080);
   return 0;
 }

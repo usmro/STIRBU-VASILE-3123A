@@ -3,3 +3,8 @@ Neurologie:AVC,Epilepsie,Scleroza,Parkinson,Alzheimer
 Urologie:Litiaza,Cistita,Prostatita,Incontinenta,Adenom
 Stomatologie:Caria,Gingivita,Parodontoza,Abces,Pulpita
 Dermatologie:Psoriazis,Eczema,Acnee,Melanom,Dermatita
+Ortopedie:Fractura,Artrita,Osteoporoza,Luxatie,Tendinita
+Oftalmologie:Glaucom,Cataracta,Miopie,Conjunctivita,Retina
+ORL:Sinuzita,Otita,Amigdalita,Laringita,Polipi
+Gastroenterologie:Gastrita,Ulcer,Colita,Ciroza,Reflux
+Oncologie:Cancer,Leucemie,Limfom,Melanom,Tumora

@@ -1,2 +1,2 @@
-Vasile Stirbu #076112 5400 1
-Stirbu VAsile #376591 9450 0
+Vasile	Stirbu	#076112	5400	1
+Stirbu	Vasile	#376591	9450	0
