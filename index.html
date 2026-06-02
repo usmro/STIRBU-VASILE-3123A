@@ -1114,6 +1114,12 @@
           <a class="admin-menu-item" onclick="showAdminTab('medici', event)">
             <span class="mi-icon">👨‍⚕️</span> Adaugă Medic
           </a>
+          <a class="admin-menu-item" onclick="showAdminTab('salariu', event)">
+            <span class="mi-icon">💵</span> Modifică Salariu
+          </a>
+          <a class="admin-menu-item" onclick="showAdminTab('orar', event)">
+            <span class="mi-icon">🕐</span> Modifică Program
+          </a>
           <a class="admin-menu-item" onclick="showAdminTab('harta', event)">
             <span class="mi-icon">🗺️</span> Hartă Spital
           </a>
@@ -1567,6 +1573,199 @@ Stimate ${toName},
     body
   );
 }
+
+async function trimiteEmailAmbulanta(email, toName, diagnostic, camera, etaj, codInternare, codFactura, suma) {
+  const body = `
+Stimate ${toName},
+
+🚑 Acest email a fost trimis către aparținătorul pacientului înregistrat în stare de urgență (Cod Roșu) la Spitalul Central.
+
+🏥 DETALII INTERNARE URGENTĂ:
+• Pacient: ${toName}
+• Triage: 🔴 COD ROȘU (Repartizare Imediată)
+• Diagnostic: ${diagnostic}
+• Cameră alocată: ${camera} (Etaj ${etaj})
+• Cod internare: ${codInternare}
+
+🧾 DETALII FACTURARE:
+• Cod factură: ${codFactura}
+• Sumă de plată: ${Number(suma).toFixed(2)} RON (incl. TVA)
+• Scadență: 06.06.2026
+• Plată online: https://spital-central.ro/plata?cod=${codFactura}
+
+Vă asigurăm că echipa noastră medicală depune toate eforturile pentru îngrijirea pacientului.
+
+📍 LOCAȚIE: Spital Central, Str. Sănătății nr. 1, București
+📞 Contact de urgență: 021-SANATATE
+  `.trim();
+
+  return await trimiteEmailReal(
+    email, toName,
+    `🚨 Alertă Spital: Internare de Urgență (Cod Roșu) – ${toName}`,
+    body
+  );
+}
+
+async function trimiteEmailTriajInternare(email, toName, codUrg, scor, camera, etaj, codInternare, codFact, cost) {
+  const culoareUrg = codUrg === 'ROSU' ? '🔴 COD ROȘU (Risc Vital Imediat)' : '🟠 COD PORTOCALIU (Urgență Majoră)';
+  const body = `
+Stimate ${toName},
+
+⚡ Evaluarea dumneavoastră de triaj online la Spitalul Central a fost finalizată.
+
+🏥 REZULTAT EVALUARE TRIAJ:
+• Cod de urgență: ${culoareUrg}
+• Scor triaj: ${scor} / 20 puncte
+• Status: Necesită internare imediată!
+
+🛏️ DETALII INTERNARE ALOCATĂ:
+• Cameră: ${camera} (Etaj ${etaj})
+• Cod internare: ${codInternare}
+
+🧾 DETALII FACTURARE:
+• Cod factură: ${codFact}
+• Sumă de plată: ${Number(cost).toFixed(2)} RON (incl. TVA)
+• Scadență: 06.06.2026
+• Plată online: https://spital-central.ro/plata?cod=${codFact}
+
+Vă rugăm să vă prezentați urgent la spital. Echipa de gardă este pregătită pentru preluarea dumneavoastră.
+
+📍 LOCAȚIE: Spital Central, Str. Sănătății nr. 1, București
+📞 Contact: 021-SANATATE
+  `.trim();
+
+  return await trimiteEmailReal(
+    email, toName,
+    `⚡ Rezultat Triaj Spital Central: ${codUrg} – Internare Imediată`,
+    body
+  );
+}
+
+async function trimiteEmailTriajVerde(email, toName, scor) {
+  const body = `
+Stimate ${toName},
+
+⚡ Evaluarea dumneavoastră de triaj online la Spitalul Central a fost finalizată.
+
+🏥 REZULTAT EVALUARE TRIAJ:
+• Cod de urgență: 🟢 COD VERDE (Situație Non-Urgentă)
+• Scor triaj: ${scor} / 20 puncte
+• Status: Nu este necesară internarea imediată.
+
+📋 RECOMANDARE:
+Simptomele dumneavoastră indică o situație stabilă. Nu aveți nevoie de spitalizare de urgență. 
+Vă recomandăm să planificați o consultație standard la unul dintre medicii noștri specialiști.
+
+📅 Puteți efectua o programare online pe platforma noastră oricând.
+
+📍 LOCAȚIE: Spital Central, Str. Sănătății nr. 1, București
+📞 Contact: 021-SANATATE
+
+Vă dorim multă sănătate!
+  `.trim();
+
+  return await trimiteEmailReal(
+    email, toName,
+    `⚡ Rezultat Triaj Spital Central: COD VERDE – Recomandări`,
+    body
+  );
+}
+
+async function trimiteEmailPrezentareInternare(email, toName, specFinal, camera, etaj, codFactura, suma, codInternare) {
+  const body = `
+Stimate ${toName},
+
+🩺 Evaluarea dumneavoastră medicală (Prezentare Singur) la Spitalul Central a fost finalizată.
+
+🏥 RECOMANDARE: INTERNARE RECOMANDATĂ
+În urma evaluării simptomelor dumneavoastră, medicii noștri au decis că este necesară spitalizarea sub supraveghere continuă.
+
+🛏️ DETALII REPARTIZARE INTERNARE:
+• Secție repartizată: ${specFinal}
+• Cameră alocată: ${camera} (Etaj ${etaj})
+• Cod internare: ${codInternare}
+
+🧾 FACTURĂ MEDICALĂ EMISĂ:
+• Cod factură: ${codFactura}
+• Serviciu: Internare ${specFinal}
+• Sumă de plată: ${Number(suma).toFixed(2)} RON
+• Scadență: 06.06.2026
+• Plată online: https://spital-central.ro/plata?cod=${codFactura}
+
+Vă rugăm să vă prezentați la secția indicată. Vă dorim o recuperare cât mai rapidă!
+
+📍 LOCAȚIE: Spital Central, Str. Sănătății nr. 1, București
+📞 Contact: 021-SANATATE
+  `.trim();
+
+  return await trimiteEmailReal(
+    email, toName,
+    `🏥 Recomandare Internare Spital Central – ${specFinal}`,
+    body
+  );
+}
+
+async function trimiteEmailPrezentareConsultatie(email, toName, specFinal, codFactura, suma) {
+  const body = `
+Stimate ${toName},
+
+🩺 Evaluarea dumneavoastră medicală (Prezentare Singur) la Spitalul Central a fost finalizată.
+
+🏥 RECOMANDARE: CONSULTAȚIE AMBULATORIE
+În urma evaluării simptomelor, s-a stabilit că starea dumneavoastră este stabilă și nu necesită internare. Vă recomandăm o programare la un medic specialist.
+
+📋 DETALII RECOMANDATE:
+• Secție recomandată pentru control: ${specFinal}
+
+🧾 FACTURĂ MEDICALĂ CONSULTAȚIE TRIAJ:
+• Cod factură: ${codFactura}
+• Serviciu: Consultație ambulatorie ${specFinal}
+• Sumă de plată: ${Number(suma).toFixed(2)} RON
+• Scadență: 06.06.2026
+• Plată online: https://spital-central.ro/plata?cod=${codFactura}
+
+📅 Vă sugerăm să efectuați o programare formală pe site-ul nostru la secția ${specFinal}.
+
+📍 LOCAȚIE: Spital Central, Str. Sănătății nr. 1, București
+📞 Contact: 021-SANATATE
+
+Vă dorim multă sănătate!
+  `.trim();
+
+  return await trimiteEmailReal(
+    email, toName,
+    `🩺 Recomandare Consultație Spital Central – Secția ${specFinal}`,
+    body
+  );
+}
+
+async function trimiteEmailAnulareProgramare(email, toName, medic, sectie, dataOra, cod) {
+  const body = `
+Stimate ${toName},
+
+❌ Programarea dumneavoastră la Spitalul Central a fost anulată.
+
+📋 DETALII PROGRAMARE ANULATĂ:
+• Pacient: ${toName}
+• Medic: ${medic}
+• Secție: ${sectie}
+• Data și Ora: ${dataOra}
+• Cod programare: ${cod}
+
+Dacă această anulare a fost o greșeală, puteți planifica o nouă programare oricând folosind platforma noastră online.
+
+📍 LOCAȚIE: Spital Central, Str. Sănătății nr. 1, București
+📞 Contact: 021-SANATATE
+
+Vă dorim o zi bună!
+  `.trim();
+
+  return await trimiteEmailReal(
+    email, toName,
+    `❌ Anulare Programare Spital Central – ${dataOra}`,
+    body
+  );
+}
 const SECTII = {
   // ── ETAJ 1 ──
   'Cardiologie':       { boli: ['Hipertensiune', 'Aritmie', 'Angina pectorala', 'Infarct', 'Insuficienta cardiaca'], medici: ['Dr.Popescu', 'Dr.Ionescu', 'Dr.Dumitru', 'Dr.Avram', 'Dr.Vasilescu', 'Dr.Georgescu'] },
@@ -1861,7 +2060,11 @@ function proceseazaAmbulanta() {
   }
   const tip   = document.getElementById('amb-tip').value;
   const asig  = document.getElementById('amb-asig').value;
-  const email = document.getElementById('amb-email').value;
+  const email = document.getElementById('amb-email').value.trim();
+  if (email && !email.includes('@gmail')) {
+    showPopup({icon:'⚠️', iconClass:'warning', title:'Email invalid', desc:'Dacă introduceți o adresă de email, aceasta trebuie să fie o adresă Gmail validă (ex: familie@gmail.com).'});
+    return;
+  }
 
   const tipMap = {cardiac:'Stop cardiac / Infarct', neuro:'AVC / Traumă neurologică', trauma:'Traumă / Accident', other:'Urgență vitală neclarificată'};
   const specMap= {cardiac:'Cardiologie', neuro:'Neurologie', trauma:'Urologie', other:'Cardiologie'};
@@ -1900,7 +2103,12 @@ function proceseazaAmbulanta() {
   }
 
   fetch('/api/internare', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
-    .then(() => loadDataFromBackend());
+    .then(() => {
+      loadDataFromBackend();
+      if (email) {
+        trimiteEmailAmbulanta(email, `${nume} ${prenume}`, boala, mergeOp ? 'Sala de Operații – Subsol' : camInfo.camera, camInfo.etaj, cod, codFact, cost);
+      }
+    });
 
   closeModal('modal-ambulanta');
 
@@ -1928,7 +2136,9 @@ function proceseazaAmbulanta() {
 function startTriaj() {
   const n = document.getElementById('urg-nume').value.trim();
   const p = document.getElementById('urg-prenume').value.trim();
-  if (!n || !p) { showPopup({icon:'⚠️',iconClass:'warning',title:'Date incomplete',desc:'Completați numele și prenumele.'}); return; }
+  const e = document.getElementById('urg-email').value.trim();
+  if (!n || !p || !e) { showPopup({icon:'⚠️',iconClass:'warning',title:'Date incomplete',desc:'Completați toate câmpurile obligatorii, inclusiv Gmail.'}); return; }
+  if (!e.includes('@gmail')) { showPopup({icon:'⚠️',iconClass:'warning',title:'Gmail invalid',desc:'Introduceți o adresă de Gmail validă.'}); return; }
 
   triajAnswers = {};
   document.getElementById('urg-step1').style.display = 'none';
@@ -2023,7 +2233,16 @@ function calculeazaTriaj() {
       payload.factura = { codFactura:codFact, suma:sumaFact };
     }
     fetch('/api/internare', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
-      .then(() => loadDataFromBackend());
+      .then(() => {
+        loadDataFromBackend();
+        if (e && e.includes('@gmail')) {
+          trimiteEmailTriajInternare(e, `${n} ${p}`, urgText, score, camInfo.camera, camInfo.etaj, cod, codFact, sumaFact);
+        }
+      });
+  } else {
+    if (e && e.includes('@gmail')) {
+      trimiteEmailTriajVerde(e, `${n} ${p}`, score);
+    }
   }
 }
 
@@ -2106,10 +2325,12 @@ function calculeazaConsultatie() {
       factura: { codFactura:codFact, suma:suma }
     };
     fetch('/api/internare', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) })
-      .then(() => loadDataFromBackend());
-
-    // Email real
-    trimiteEmailFacturaInternare(e, n + ' ' + p, factObj);
+      .then(() => {
+        loadDataFromBackend();
+        if (e && e.includes('@gmail')) {
+          trimiteEmailPrezentareInternare(e, n + ' ' + p, specFinal, camInfo.camera, camInfo.etaj, codFact, suma, cod);
+        }
+      });
 
     closeModal('modal-consultatie');
     launchConfetti();
@@ -2122,9 +2343,12 @@ function calculeazaConsultatie() {
     });
   } else {
     fetch('/api/factura', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(factObj) })
-      .then(() => loadDataFromBackend());
-    // Email real
-    trimiteEmailFacturaInternare(e, n + ' ' + p, factObj);
+      .then(() => {
+        loadDataFromBackend();
+        if (e && e.includes('@gmail')) {
+          trimiteEmailPrezentareConsultatie(e, n + ' ' + p, specFinal, codFact, suma);
+        }
+      });
     closeModal('modal-consultatie');
     showPopup({
       icon:'🟢', iconClass:'success',
@@ -2288,6 +2512,8 @@ function anuleazaProgramare() {
   const p   = document.getElementById('anul-prenume').value.trim();
   const cod = document.getElementById('anul-cod').value.trim();
 
+  const progObj = programari.find(x => x.nume === n && x.prenume === p && x.cod === cod);
+
   fetch('/api/anulare', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2297,13 +2523,19 @@ function anuleazaProgramare() {
       showPopup({icon:'❌', iconClass:'error', title:'Nu s-a găsit', desc:'Nu există nicio programare cu datele introduse. Verificați codul de anulare.'});
       return;
     }
+
+    if (progObj && progObj.email && progObj.email.includes('@gmail')) {
+      const dataOra = `${progObj.zi}.${progObj.luna}.2026, ora ${progObj.ora}`;
+      trimiteEmailAnulareProgramare(progObj.email, `${progObj.nume} ${progObj.prenume}`, progObj.medic, progObj.sectie, dataOra, progObj.cod);
+    }
+
     loadDataFromBackend().then(() => {
       closeModal('modal-anulare');
       showPopup({
         icon:'✅', iconClass:'success',
         title:'Programare anulată',
         desc:'Programarea a fost anulată cu succes.',
-        details:`<strong>Pacient:</strong> ${n} ${p}<br><strong>Data anulată cu succes!</strong>`,
+        details:`<strong>Pacient:</strong> ${n} ${p}<br><strong>Data anulată cu succes!</strong>${progObj && progObj.email && progObj.email.includes('@gmail') ? '<br>📧 Confirmarea anulării a fost trimisă pe Gmail!' : ''}`,
         btnText:'OK'
       });
     });
@@ -2420,7 +2652,114 @@ function showAdminTab(tab, e) {
           <div style="font-size:.75rem;color:var(--muted);font-weight:300">${ech}</div>
         </div>`).join('')}
       </div>`;
+  } else if (tab === 'salariu') {
+    cont.innerHTML = `<div class="admin-content-title">💵 Modifică Salariu Medic</div>
+      <div style="max-width:520px">
+        <p style="color:var(--muted);margin-bottom:20px;font-size:.9rem">Selectați medicul și introduceți noul salariu. Modificarea se salvează imediat în baza de date.</p>
+        <div class="form-group"><label class="form-label">Medic</label>
+          <select class="form-select" id="sal-medic-sel"><option value="">Se încarcă lista...</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Salariu actual</label>
+          <div id="sal-actual" style="padding:10px 14px;background:var(--ice);border-radius:10px;font-weight:600;color:var(--navy);font-size:.95rem">—</div>
+        </div>
+        <div class="form-group"><label class="form-label">Salariu nou (RON)</label>
+          <input type="number" class="form-input" id="sal-nou" placeholder="ex: 9500" min="1000" max="99999">
+        </div>
+        <button class="btn btn-navy" onclick="submitSalariu()">💾 Salvează Salariul</button>
+        <div id="sal-msg" style="margin-top:14px;font-weight:600;display:none"></div>
+      </div>`;
+    loadMediciForSelect('sal-medic-sel', 'sal-actual', 'salariu');
+  } else if (tab === 'orar') {
+    cont.innerHTML = `<div class="admin-content-title">🕐 Modifică Program Medic</div>
+      <div style="max-width:520px">
+        <p style="color:var(--muted);margin-bottom:20px;font-size:.9rem">Selectați medicul și introduceți noul program de lucru. Modificarea se salvează imediat în baza de date.</p>
+        <div class="form-group"><label class="form-label">Medic</label>
+          <select class="form-select" id="orar-medic-sel"><option value="">Se încarcă lista...</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Program actual</label>
+          <div id="orar-actual" style="padding:10px 14px;background:var(--ice);border-radius:10px;font-weight:600;color:var(--navy);font-size:.95rem">—</div>
+        </div>
+        <div class="form-group"><label class="form-label">Program nou</label>
+          <input type="text" class="form-input" id="orar-nou" placeholder="ex: 08:00-16:00">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+          ${['07:00-15:00','08:00-16:00','09:00-17:00','12:00-20:00','16:00-00:00'].map(h=>`<span onclick="document.getElementById('orar-nou').value='${h}'" style="cursor:pointer;padding:5px 12px;border-radius:20px;background:var(--ice);font-size:.82rem;border:1px solid var(--border);transition:.2s" onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='var(--ice)';this.style.color=''">⏱️ ${h}</span>`).join('')}
+        </div>
+        <button class="btn btn-navy" onclick="submitOrar()">💾 Salvează Programul</button>
+        <div id="orar-msg" style="margin-top:14px;font-weight:600;display:none"></div>
+      </div>`;
+    loadMediciForSelect('orar-medic-sel', 'orar-actual', 'orar');
   }
+}
+
+let _mediciCache = [];
+function loadMediciForSelect(selId, infoId, mode) {
+  fetch('http://localhost:8080/api/medici')
+    .then(r => r.json())
+    .then(list => {
+      _mediciCache = list;
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      sel.innerHTML = '<option value="">-- Alegeți medicul --</option>' +
+        list.map((d,i) => `<option value="${i}">${d.nume} (${d.specializare})</option>`).join('');
+      sel.onchange = () => {
+        const idx = parseInt(sel.value);
+        const info = document.getElementById(infoId);
+        if (isNaN(idx) || !info) return;
+        if (mode === 'salariu') info.textContent = list[idx].salariu + ' RON';
+        else info.textContent = list[idx].orar || 'Nespecificat';
+      };
+    })
+    .catch(() => {
+      const sel = document.getElementById(selId);
+      if (sel) sel.innerHTML = '<option>Eroare – serverul nu răspunde</option>';
+    });
+}
+
+function submitSalariu() {
+  const sel = document.getElementById('sal-medic-sel');
+  const valNou = parseInt(document.getElementById('sal-nou').value);
+  const msg = document.getElementById('sal-msg');
+  if (!sel || sel.value === '') { showMsg(msg, '⚠️ Selectați un medic.', '#e74c3c'); return; }
+  if (isNaN(valNou) || valNou < 1000) { showMsg(msg, '⚠️ Introduceți un salariu valid (min 1000 RON).', '#e74c3c'); return; }
+  const medic = _mediciCache[parseInt(sel.value)];
+  fetch('http://localhost:8080/api/modifica-salariu', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ nume: medic.nume, salariu: valNou })
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showMsg(msg, `✅ Salariul medicului ${medic.nume} a fost actualizat la ${valNou} RON.`, '#27ae60');
+      document.getElementById('sal-actual').textContent = valNou + ' RON';
+      document.getElementById('sal-nou').value = '';
+    } else showMsg(msg, '❌ Eroare: ' + (d.error || 'necunoscută'), '#e74c3c');
+  }).catch(() => showMsg(msg, '❌ Serverul nu răspunde.', '#e74c3c'));
+}
+
+function submitOrar() {
+  const sel = document.getElementById('orar-medic-sel');
+  const valNou = document.getElementById('orar-nou').value.trim();
+  const msg = document.getElementById('orar-msg');
+  if (!sel || sel.value === '') { showMsg(msg, '⚠️ Selectați un medic.', '#e74c3c'); return; }
+  if (!valNou) { showMsg(msg, '⚠️ Introduceți un program de lucru.', '#e74c3c'); return; }
+  const medic = _mediciCache[parseInt(sel.value)];
+  fetch('http://localhost:8080/api/modifica-orar', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ nume: medic.nume, orar: valNou })
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'ok') {
+      showMsg(msg, `✅ Programul medicului ${medic.nume} a fost actualizat la ${valNou}.`, '#27ae60');
+      document.getElementById('orar-actual').textContent = valNou;
+      document.getElementById('orar-nou').value = '';
+    } else showMsg(msg, '❌ Eroare: ' + (d.error || 'necunoscută'), '#e74c3c');
+  }).catch(() => showMsg(msg, '❌ Serverul nu răspunde.', '#e74c3c'));
+}
+
+function showMsg(el, text, color) {
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = color;
+  el.style.display = 'block';
+  setTimeout(() => { if (el) el.style.display = 'none'; }, 5000);
 }
 
 async function addMedic() {

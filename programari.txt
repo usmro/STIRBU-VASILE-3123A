@@ -1,3 +1,2 @@
-Stirbu	Vasile	vasistirbu@gmail.com	0759523522	Hipertensiune	Dr.Georgescu	4	29	10:30	#290039
 Stirbu	Ioan	ioanstirbu@gmail.com	0759523522	Hipertensiune	Dr.Georgescu	4	1	08:00	#573465
 Ureche	Daniel	dani@gmail.com	0759522522	Caria	Dr.Enache	5	5	10:30	#594706

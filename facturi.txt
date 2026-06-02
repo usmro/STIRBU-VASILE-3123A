@@ -1,2 +1,3 @@
-Vasile	Stirbu	#076112	5400	1
+﻿Vasile	Stirbu	#076112	5400	1
 Stirbu	Vasile	#376591	9450	0
+Stirbu	Vasilas	FACT-469534	1200	1

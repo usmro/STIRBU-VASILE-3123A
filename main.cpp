@@ -449,6 +449,7 @@ private:
     cout << "\n[SMTP] Factura trimisa prin email la " << email << endl;
   }
 
+public:
   // ============================================================
   // BUG FIX: incarcaDate nu mai sterge camereOcupate daca e apelata
   // in mijlocul unei sesiuni cu camere deja alocate (fix major).
@@ -1699,6 +1700,98 @@ int main()
       res.status = 400;
       res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
     } });
+
+  // GET /api/medici – returneaza toti medicii
+  svr.Get("/api/medici", [&](const httplib::Request &, httplib::Response &res)
+          {
+    json j = json::array();
+    for (auto it = manager.bazaMedici.begin(); it != manager.bazaMedici.end(); ++it)
+    {
+      for (const auto &d : it->second)
+      {
+        j.push_back({
+          {"nume", d.nume},
+          {"orar", d.orar},
+          {"zileLibere", d.zileLibere},
+          {"telefon", d.telefon},
+          {"specializare", d.specializare},
+          {"salariu", d.salariu}
+        });
+      }
+    }
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_content(j.dump(), "application/json");
+  });
+
+  // POST /api/modifica-salariu
+  svr.Post("/api/modifica-salariu", [&](const httplib::Request &req, httplib::Response &res)
+           {
+    try {
+      auto body = json::parse(req.body);
+      string nume = body["nume"].get<string>();
+      int salariu = body["salariu"].get<int>();
+      bool found = false;
+      for (auto it = manager.bazaMedici.begin(); it != manager.bazaMedici.end(); ++it)
+      {
+        for (size_t i = 0; i < it->second.size(); i++)
+        {
+          if (it->second[i].nume == nume)
+          {
+            it->second[i].salariu = salariu;
+            found = true;
+          }
+        }
+      }
+      res.set_header("Access-Control-Allow-Origin", "*");
+      if (found) {
+        manager.salveazaMedici();
+        manager.incarcaDate();
+        res.set_content("{\"status\":\"ok\"}", "application/json");
+      } else {
+        res.status = 404;
+        res.set_content("{\"error\":\"doctor not found\"}", "application/json");
+      }
+    } catch (const exception &e) {
+      res.status = 400;
+      res.set_header("Access-Control-Allow-Origin", "*");
+      res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
+    }
+  });
+
+  // POST /api/modifica-orar
+  svr.Post("/api/modifica-orar", [&](const httplib::Request &req, httplib::Response &res)
+           {
+    try {
+      auto body = json::parse(req.body);
+      string nume = body["nume"].get<string>();
+      string orar = body["orar"].get<string>();
+      bool found = false;
+      for (auto it = manager.bazaMedici.begin(); it != manager.bazaMedici.end(); ++it)
+      {
+        for (size_t i = 0; i < it->second.size(); i++)
+        {
+          if (it->second[i].nume == nume)
+          {
+            it->second[i].orar = orar;
+            found = true;
+          }
+        }
+      }
+      res.set_header("Access-Control-Allow-Origin", "*");
+      if (found) {
+        manager.salveazaMedici();
+        manager.incarcaDate();
+        res.set_content("{\"status\":\"ok\"}", "application/json");
+      } else {
+        res.status = 404;
+        res.set_content("{\"error\":\"doctor not found\"}", "application/json");
+      }
+    } catch (const exception &e) {
+      res.status = 400;
+      res.set_header("Access-Control-Allow-Origin", "*");
+      res.set_content(string("{\"error\":\"") + e.what() + "\"}", "application/json");
+    }
+  });
 
   // OPTIONS preflight pentru CORS
   svr.Options(".*", [](const httplib::Request &, httplib::Response &res)
