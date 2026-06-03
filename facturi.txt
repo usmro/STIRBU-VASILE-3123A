@@ -1,1 +1,8 @@
-﻿Stirbu	Vasilas	FACT-469534	1200	1
+﻿Vasile	Stirbu	#076112	5400	1
+Stirbu	Vasile	#376591	9450	0
+Stirbu	Vasilas	FACT-469534	1200	1
+Mitrofan	Denisa	FACT-646617	238	0
+Mitrofan	Denisa	FACT-144524	238	0
+Mitrofan	Vasile	FACT-482453	238	0
+Stirbu	Ioan	FACT-492408	238	0
+Stirb	Floarea	FACT-834867	4500	1

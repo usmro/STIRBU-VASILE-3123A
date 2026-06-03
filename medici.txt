@@ -13,7 +13,7 @@ Dermatologie;Dr.Voicu;14:00-20:00;Sat;0755999000;7100
 Gastroenterologie;Dr.Stoica;08:00-16:00;Sun;0790111222;8000
 Gastroenterologie;Dr.Marinescu;12:00-20:00;Sat;0790333444;7800
 Gastroenterologie;Dr.Puscasu;07:00-15:00;Mon;0790555666;8100
-Gastroenterologie;Dr.Faur;10:00-18:00;Wed;0790777888;7900
+Gastroenterologie;Dr.Faur;10:00-18:00;Wed;0790777888;9200
 Gastroenterologie;Dr.Botezatu;09:00-17:00;Fri;0790999000;8050
 Gastroenterologie;Dr.Coman;14:00-22:00;Tue;0790222111;7700
 Neurologie;Dr.Diaconu;08:00-16:00;Sat;0722111222;7900
